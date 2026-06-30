@@ -7,7 +7,7 @@ Check out the live application: [Render Deployment / Supabase Link]
 
 ## 📱 Android Prototype
 Click below to directly download and install the Android APK:
-[![Download APK](https://img.shields.io/badge/Download_APK-100000?style=for-the-badge&logo=android&logoColor=white&labelColor=303030&color=3DDC84)](#PLACEHOLDER_LINK)
+[![Download APK](https://img.shields.io/badge/Download_APK-100000?style=for-the-badge&logo=android&logoColor=white&labelColor=303030&color=3DDC84)](https://github.com/prakharsri1211-sys/healthtech-queue-prototype/releases/download/v1.0.0/HealthTech.Queue.apk)
 
 ## Tech Stack
 - **Backend**: Java, Spring Boot, REST APIs
