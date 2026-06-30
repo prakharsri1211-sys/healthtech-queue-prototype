@@ -1,0 +1,1 @@
+ALTER TABLE doctor ADD COLUMN IF NOT EXISTS last_shift_date DATE;

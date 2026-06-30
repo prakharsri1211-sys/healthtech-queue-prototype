@@ -1,0 +1,125 @@
+﻿{
+    "message":  "Database seeded successfully with 3 Doctors, 2 Mediators, 5 Patients!",
+    "doctors":  [
+                    {
+                        "id":  7,
+                        "speciality":  "General Medicine",
+                        "name":  "Dr. Rajesh Kumar"
+                    },
+                    {
+                        "id":  8,
+                        "speciality":  "Pediatrics",
+                        "name":  "Dr. Priya Sharma"
+                    },
+                    {
+                        "id":  9,
+                        "speciality":  "Cardiology",
+                        "name":  "Dr. Anil Mehta"
+                    }
+                ],
+    "doctorAccounts":  [
+                           {
+                               "doctorId":  7,
+                               "accountId":  26,
+                               "name":  "Dr. Rajesh Kumar",
+                               "username":  "doctor1",
+                               "password":  "password123"
+                           },
+                           {
+                               "doctorId":  8,
+                               "accountId":  27,
+                               "name":  "Dr. Priya Sharma",
+                               "username":  "doctor2",
+                               "password":  "password123"
+                           },
+                           {
+                               "doctorId":  9,
+                               "accountId":  28,
+                               "name":  "Dr. Anil Mehta",
+                               "username":  "doctor3",
+                               "password":  "password123"
+                           }
+                       ],
+    "mediators":  [
+                      {
+                          "clinic":  "City Health Clinic",
+                          "phone":  "9876500001",
+                          "name":  "Sunita Verma",
+                          "id":  5
+                      },
+                      {
+                          "clinic":  "Green Cross Hospital",
+                          "phone":  "9876500002",
+                          "name":  "Ravi Patel",
+                          "id":  6
+                      }
+                  ],
+    "mediatorAccounts":  [
+                             {
+                                 "mediatorId":  5,
+                                 "accountId":  29,
+                                 "name":  "Sunita Verma",
+                                 "username":  "mediator1",
+                                 "password":  "med1234"
+                             },
+                             {
+                                 "mediatorId":  6,
+                                 "accountId":  30,
+                                 "name":  "Ravi Patel",
+                                 "username":  "mediator2",
+                                 "password":  "med1234"
+                             }
+                         ],
+    "patients":  [
+                     {
+                         "patientId":  "69b54eb12319e844f52e1f2a",
+                         "accountId":  21,
+                         "name":  "Amit Sharma",
+                         "username":  "patient1",
+                         "password":  "pass1234",
+                         "phone":  "9100000001",
+                         "aadhar":  "111122223333",
+                         "abhaId":  "ABHA-2024-001"
+                     },
+                     {
+                         "patientId":  "69b54eb22319e844f52e1f2b",
+                         "accountId":  22,
+                         "name":  "Neha Gupta",
+                         "username":  "patient2",
+                         "password":  "pass1234",
+                         "phone":  "9100000002",
+                         "aadhar":  "222233334444",
+                         "abhaId":  "ABHA-2024-002"
+                     },
+                     {
+                         "patientId":  "69b54eb32319e844f52e1f2c",
+                         "accountId":  23,
+                         "name":  "Ravi Singh",
+                         "username":  "patient3",
+                         "password":  "pass1234",
+                         "phone":  "9100000003",
+                         "aadhar":  "333344445555",
+                         "abhaId":  "ABHA-2024-003"
+                     },
+                     {
+                         "patientId":  "69b54eb32319e844f52e1f2d",
+                         "accountId":  24,
+                         "name":  "Pooja Reddy",
+                         "username":  "patient4",
+                         "password":  "pass1234",
+                         "phone":  "9100000004",
+                         "aadhar":  "444455556666",
+                         "abhaId":  "ABHA-2024-004"
+                     },
+                     {
+                         "patientId":  "69b54eb42319e844f52e1f2e",
+                         "accountId":  25,
+                         "name":  "Kiran Das",
+                         "username":  "patient5",
+                         "password":  "pass1234",
+                         "phone":  "9100000005",
+                         "aadhar":  "555566667777",
+                         "abhaId":  "ABHA-2024-005"
+                     }
+                 ]
+}

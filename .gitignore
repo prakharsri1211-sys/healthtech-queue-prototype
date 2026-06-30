@@ -1,0 +1,74 @@
+# --- Frontend (React/Vite) ---
+node_modules/
+dist/
+dist-ssr/
+build/
+.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+# dotenv environment variables file
+.env
+.env.*
+.env.cloud
+
+# Ensure application.properties is NOT ignored
+!application.properties
+!backend/src/main/resources/application.properties
+.env*.local
+
+# --- Backend (Spring Boot/Maven) ---
+target/
+*.class
+*.log
+*.jar
+*.war
+*.nar
+*.ear
+hs_err_pid*
+replay_pid*
+backend_logs.txt
+backend_errors.log
+
+# --- IDE & Editors ---
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.project
+.classpath
+.settings/
+.factorypath
+.DS_Store
+Thumbs.db
+
+# --- AI & LLM Local Configs (Ollama/Qwen/Agent Junk) ---
+.gemini/
+.antigravity/
+.agents/
+ollama/
+qwen/
+models/
+*.gguf
+.cursor/
+artifacts/
+project_analysis.md
+IMPLEMENTATION_SUMMARY.md
+ARCHITECTURE.md
+QUICK_START.md
+EXTENDED_PROJECT_DESCRIPTION.md
+
+# --- Local Infrastructure ---
+docker-compose.override.yml
+*.sql
+!schema.sql
+!backend/src/main/resources/db/migration/*.sql
+
+# --- Large Binaries & Portable Tools ---
+mongodb-portable/
+mongodb-portable.zip
+backend_log.txt
+backend_output.txt
+build_log.txt
+mvn_output.log

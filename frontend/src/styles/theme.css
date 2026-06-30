@@ -1,0 +1,135 @@
+:root {
+  /* Dynamic Theme Variables - Light Mode (Default) */
+  --bg-primary: #F8FAFC; /* Slate 50 */
+  --bg-secondary: #FFFFFF;
+  --text-primary: #1E293B; /* Slate 800 */
+  --text-secondary: #475569; /* Slate 600 */
+  --text-muted: #94A3B8; /* Slate 400 */
+  --border-color: #E2E8F0; /* Slate 200 */
+  
+  /* Status Colors (Subtle & Professional) */
+  --success-green: #10B981;
+  --warning-orange: #F59E0B;
+  --error-red: #EF4444;
+  
+  /* Material Design 3 Surfaces & Elevations - Light Mode */
+  --md3-surface: #FFFFFF;
+  --md3-surface-container: #F3F4F6;
+  --md3-elevation-1: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --md3-elevation-2: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --md3-elevation-3: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-primary: #020617; /* Slate 950 */
+    --bg-secondary: #0F172A; /* Slate 900 */
+    --text-primary: #F8FAFC; /* Slate 50 */
+    --text-secondary: #CBD5E1; /* Slate 300 */
+    --text-muted: #64748B; /* Slate 500 */
+    --border-color: #1E293B; /* Slate 800 */
+    
+    /* Material Design 3 Surfaces & Elevations - Dark Mode */
+    --md3-surface: #1E293B; /* Slate 800 */
+    --md3-surface-container: #0F172A; /* Slate 900 */
+    --md3-elevation-1: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
+    --md3-elevation-2: 0 4px 8px -1px rgba(0, 0, 0, 0.4);
+    --md3-elevation-3: 0 12px 20px -3px rgba(0, 0, 0, 0.5);
+  }
+}
+
+/* Global Typography & Base Elements */
+@layer base {
+  body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--text-primary);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+}
+
+/* ============================================================ */
+/* ANDROID MATERIAL DESIGN 3 UTILITIES                          */
+/* ============================================================ */
+
+@layer utilities {
+  /* Replaces glass-panel with a native Android card look */
+  .glass-panel {
+    background: var(--md3-surface);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--md3-elevation-2);
+    border-radius: 28px; /* Standard MD3 Large Corner Radius */
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* MD3 Interactive Surface */
+  .interactive-card {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .interactive-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--md3-elevation-3);
+  }
+
+  .interactive-card:active {
+    transform: scale(0.98);
+    box-shadow: var(--md3-elevation-1);
+  }
+
+  .btn-premium {
+    @apply flex items-center justify-center font-bold transition-all duration-200 active:scale-95;
+    border-radius: 9999px; /* MD3 Pill Shape */
+    box-shadow: var(--md3-elevation-1);
+  }
+}
+
+/* ============================================================ */
+/* SUBTLE THREE-TIER ROLE ACCENTS (Borders, Text, Glows)        */
+/* ============================================================ */
+
+/* Patient Accent (Clinical Teal) */
+.accent-patient {
+  @apply text-clinical border-clinical/20 bg-clinical/5;
+}
+.btn-patient {
+  @apply bg-clinical text-white hover:bg-clinical-dark hover:shadow-lg hover:shadow-clinical/20;
+}
+
+/* Doctor Accent (Slate) */
+.accent-doctor {
+  @apply text-slate-700 dark:text-slate-200 border-slate-500/20 bg-slate-500/5;
+}
+.btn-doctor {
+  @apply bg-slate-800 text-white hover:bg-slate-900 hover:shadow-lg hover:shadow-slate-800/20 dark:bg-slate-700 dark:hover:bg-slate-600;
+}
+
+/* Mediator Accent (Indigo) */
+.accent-mediator {
+  @apply text-indigo-600 dark:text-indigo-400 border-indigo-500/20 bg-indigo-500/5;
+}
+.btn-mediator {
+  @apply bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-600/20;
+}
+
+/* Standard Status Badges */
+.badge-subtle {
+  @apply px-3 py-1 rounded-full text-xs font-bold tracking-wide uppercase border;
+}
+.badge-late {
+  @apply bg-red-50 text-red-600 border-red-200 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400;
+}
+.badge-waiting {
+  @apply bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-400;
+}
+.badge-serving {
+  @apply bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-400;
+}

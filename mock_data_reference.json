@@ -1,0 +1,18 @@
+{
+  "accounts": [
+    { "id": 6, "username": "patient1", "password": "password123", "fullName": "Amit Sharma Account", "profiles": ["Amit Sharma", "Sunita Sharma", "Ravi Sharma"] },
+    { "id": 7, "username": "patient2", "password": "password123", "fullName": "Neha Gupta Account", "profiles": ["Neha Gupta", "Amit Gupta", "Sanjay Gupta"] },
+    { "id": 8, "username": "patient3", "password": "password123", "fullName": "Ravi Singh Account", "profiles": ["Ravi Singh", "Priya Singh", "Anjali Singh"] },
+    { "id": 9, "username": "patient4", "password": "password123", "fullName": "Pooja Reddy Account", "profiles": ["Pooja Reddy", "Kiran Reddy", "Vijay Reddy"] },
+    { "id": 10, "username": "patient5", "password": "password123", "fullName": "Kiran Das Account", "profiles": ["Kiran Das", "Maya Das", "Arjun Das"] },
+    { "id": 3, "username": "doctor1", "password": "password123", "role": "ROLE_DOCTOR", "fullName": "Dr. Rajesh Kumar" },
+    { "id": 4, "username": "mediator1", "password": "password123", "role": "ROLE_MEDIATOR", "fullName": "Sunita Verma" }
+  ],
+  "patients": [
+    { "id": "69b53b4ff34cfc46ed0a355e", "name": "Amit Sharma", "accountId": 6 },
+    { "id": "69b53b50f34cfc46ed0a3560", "name": "Neha Gupta", "accountId": 7 },
+    { "id": "69b53b50f34cfc46ed0a3562", "name": "Ravi Singh", "accountId": 8 },
+    { "id": "69b53b50f34cfc46ed0a3564", "name": "Pooja Reddy", "accountId": 9 },
+    { "id": "69b53b50f34cfc46ed0a3566", "name": "Kiran Das", "accountId": 10 }
+  ]
+}

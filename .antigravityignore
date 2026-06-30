@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+.venv/
+venv/
+__pycache__/
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+coverage/
+
+# Logs
+*.log
+
+# Large lockfiles
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Media
+*.mp4
+*.zip
+*.tar.gz
+
+# Generated files
+*.min.js
+*.map
+
+# IDE caches
+.vscode/
+.idea/
+
+# Old code
+legacy/
+deprecated/
+backup/

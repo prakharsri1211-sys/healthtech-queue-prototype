@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.onrender.online_queue_frontend.twa",
+        "sha256_cert_fingerprints": ["F2:D5:79:F7:9C:AE:E3:37:44:0B:A9:23:6D:BB:20:E7:61:D6:C6:DB:00:30:9C:75:2F:10:72:2E:7E:33:C6:FD"]
+      }
+    }]

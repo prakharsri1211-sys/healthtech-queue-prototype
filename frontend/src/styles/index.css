@@ -1,0 +1,119 @@
+@import './fonts.css';
+@import './tailwind.css';
+@import './theme.css';
+
+body {
+  /* Stops the app from bouncing when scrolling past the edges */
+  overscroll-behavior-y: none; 
+  /* Removes the weird blue flash when tapping buttons on Android */
+  -webkit-tap-highlight-color: transparent; 
+}
+
+/* Issue 3 & 4: Travel logistics CSS */
+.travel-logistics-section { margin: 24px 0; }
+.logistics-header { color:#10b981; font-size:11px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; margin-bottom:16px; display:block; }
+.logistics-container { display:flex; gap:12px; align-items:stretch; }
+.logistics-box { flex:1; background:linear-gradient(135deg,rgba(16,185,129,.12),rgba(16,185,129,.06)); border:1px solid rgba(16,185,129,.3); border-radius:12px; padding:16px; display:flex; flex-direction:column; justify-content:space-between; min-height:140px; }
+.box-header { display:flex; align-items:center; gap:8px; margin-bottom:12px; }
+.box-title { color:#10b981; font-size:10px; font-weight:700; letter-spacing:.8px; text-transform:uppercase; }
+.box-value { color:#f0fdfa; font-size:18px; font-weight:700; margin-bottom:8px; }
+.box-label { color:#a7f3d0; font-size:11px; }
+.travel-info-column { display:flex; flex-direction:column; justify-content:center; min-width:100px; }
+.travel-metric-item { display:flex; flex-direction:column; align-items:center; gap:4px; padding:12px 8px; }
+.metric-label { color:#d1d5db; font-size:10px; font-weight:600; text-transform:uppercase; }
+.metric-value { color:#10b981; font-size:16px; font-weight:700; }
+.divider { height:1px; background:rgba(16,185,129,.2); width:60%; margin:4px auto; }
+
+.btn-logout-themed {
+  position:fixed; top:16px; right:16px; z-index:50;
+  padding:10px 20px;
+  background:rgba(16,185,129,.15);
+  border:1.5px solid rgba(16,185,129,.4);
+  color:#10b981;
+  border-radius:8px; font-weight:600; font-size:12px;
+  letter-spacing:.8px; text-transform:uppercase; cursor:pointer;
+  transition:all .3s ease;
+}
+.btn-logout-themed:hover { background:rgba(16,185,129,.25); border-color:rgba(16,185,129,.6); color:#a7f3d0; transform:scale(1.02); }
+.btn-logout-themed:active { transform:scale(.98); }
+
+.checkin-button-floating { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); width:calc(100% - 40px); max-width:500px; z-index:40; }
+.btn-checkin-countdown,.btn-checkin-active { width:100%; padding:16px; border:none; border-radius:12px; font-weight:600; cursor:pointer; display:flex; flex-direction:column; gap:4px; align-items:center; }
+.btn-checkin-countdown { background:rgba(16,185,129,.12); border:1.5px solid rgba(16,185,129,.3); color:#a7f3d0; cursor:not-allowed; }
+.countdown-label { font-size:12px; font-weight:700; letter-spacing:.8px; text-transform:uppercase; }
+.countdown-display { font-size:20px; font-weight:800; color:#10b981; }
+.countdown-available { font-size:11px; opacity:.85; }
+.btn-checkin-active { background:linear-gradient(135deg,#10b981,#059669); color:#fff; box-shadow:0 8px 24px rgba(16,185,129,.4); }
+.btn-checkin-active.verified { opacity:.85; cursor:default; }
+.checkin-text { font-size:14px; font-weight:700; }
+.checkin-hint { font-size:11px; opacity:.9; text-transform:uppercase; }
+
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type=number] {
+  -moz-appearance: textfield;
+}
+
+/* ── Native App CSS Overrides ── */
+html {
+  max-width: 100%;
+}
+
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: none;
+  overscroll-behavior-x: none;
+  font-size: 16px;
+}
+
+* {
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+input, textarea, select {
+  user-select: auto;
+  -webkit-touch-callout: default;
+  font-size: 16px !important;
+}
+
+/* Ensure links and generic buttons also have larger touch targets */
+a, button {
+  min-height: 44px;
+}
+
+/* ── Material Design 3 CSS Ripple ── */
+.md3-ripple {
+  position: relative;
+  overflow: hidden;
+  transform: translate3d(0, 0, 0);
+}
+
+.md3-ripple::after {
+  content: "";
+  display: block;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  background-image: radial-gradient(circle, #fff 10%, transparent 10.01%);
+  background-repeat: no-repeat;
+  background-position: 50%;
+  transform: scale(10, 10);
+  opacity: 0;
+  transition: transform .5s, opacity 1s;
+}
+
+.md3-ripple:active::after {
+  transform: scale(0, 0);
+  opacity: .3;
+  transition: 0s;
+}
