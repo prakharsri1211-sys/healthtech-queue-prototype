@@ -1,18 +1,35 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate } from "react-router";
 import {
-  Clock, MapPin, Users, Crown, Ticket, Stethoscope, Pill, User,
-  ShieldAlert, Sparkles, Navigation, Zap, Activity, Sun, Moon,
-  LogOut, BellRing, ChevronDown, ChevronUp, ChevronLeft, CalendarClock, AlertTriangle, Loader2
+  Clock,
+  MapPin,
+  Users,
+  Crown,
+  Ticket,
+  Stethoscope,
+  Pill,
+  User,
+  ShieldAlert,
+  Sparkles,
+  Navigation,
+  Zap,
+  Activity,
+  Sun,
+  Moon,
+  LogOut,
+  BellRing,
+  ChevronDown,
+  ChevronUp,
+  ChevronLeft,
+  CalendarClock,
+  AlertTriangle,
+  Loader2,
 } from "lucide-react";
 import useWebSocket from "react-use-websocket";
 import { motion, AnimatePresence } from "motion/react";
 import { APP_STATUS } from "../utils/constants";
 import { trackUserAction } from "../utils/telemetry";
 
-/* ──────────────────────────────────────────────────────────────
-   TYPES
-   ────────────────────────────────────────────────────────────── */
 interface ClinicDetails {
   doctorName: string;
   speciality: string;
@@ -25,9 +42,6 @@ interface ClinicDetails {
 
 type Phase = "SCHEDULED" | "ACTIVE_DAY" | "LIVE" | "READY" | "CANCELED";
 
-/* ──────────────────────────────────────────────────────────────
-   COMPONENT
-   ────────────────────────────────────────────────────────────── */
 let sharedAudioCtx: AudioContext | null = null;
 const initAudioContext = () => {
   if (!sharedAudioCtx) {
@@ -53,79 +67,74 @@ const playNotificationSound = (type: "bell" | "beep" | "call") => {
     if (audioCtx.state === "suspended") {
       audioCtx.resume().catch(() => {});
     }
-    
-    // "call" simulates a classic phone ring (two notes together, repeated)
-    if (type === "call" || type === "bell") { 
-      // The Mediator uses "bell" parameter for CALL_PATIENT in the codebase right now. We will treat it as "call".
+
+    if (type === "call" || type === "bell") {
       const playRing = (delay: number) => {
         const osc1 = audioCtx.createOscillator();
         const osc2 = audioCtx.createOscillator();
         const gainNode = audioCtx.createGain();
-        
+
         osc1.type = "sine";
-        osc1.frequency.setValueAtTime(440, audioCtx.currentTime + delay); // A4
+        osc1.frequency.setValueAtTime(440, audioCtx.currentTime + delay);
         osc2.type = "sine";
-        osc2.frequency.setValueAtTime(480, audioCtx.currentTime + delay); // Dissonant tone makes the "ring"
-        
+        osc2.frequency.setValueAtTime(480, audioCtx.currentTime + delay);
+
         gainNode.gain.setValueAtTime(0, audioCtx.currentTime + delay);
-        gainNode.gain.linearRampToValueAtTime(1.0, audioCtx.currentTime + delay + 0.05); // Attack
-        gainNode.gain.setValueAtTime(1.0, audioCtx.currentTime + delay + 1.2); // Hold for 1.2s
-        gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + delay + 1.3); // Release
-        
+        gainNode.gain.linearRampToValueAtTime(1.0, audioCtx.currentTime + delay + 0.05);
+        gainNode.gain.setValueAtTime(1.0, audioCtx.currentTime + delay + 1.2);
+        gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + delay + 1.3);
+
         osc1.connect(gainNode);
         osc2.connect(gainNode);
         gainNode.connect(audioCtx.destination);
-        
+
         osc1.start(audioCtx.currentTime + delay);
         osc2.start(audioCtx.currentTime + delay);
         osc1.stop(audioCtx.currentTime + delay + 1.4);
         osc2.stop(audioCtx.currentTime + delay + 1.4);
       };
 
-      // Play a standard double-ring (Ring for 1.3s, Pause 0.2s, Ring for 1.3s)
       playRing(0);
       playRing(1.5);
-      
     } else {
-      // "beep" / turn signal -> Elevator Ding-Dong chime
       const playChime = (freq: number, delay: number) => {
         const osc = audioCtx.createOscillator();
         const gainNode = audioCtx.createGain();
-        
+
         osc.type = "sine";
         osc.frequency.setValueAtTime(freq, audioCtx.currentTime + delay);
-        
+
         gainNode.gain.setValueAtTime(0, audioCtx.currentTime + delay);
-        gainNode.gain.linearRampToValueAtTime(1.0, audioCtx.currentTime + delay + 0.05); // Quick attack
-        gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + delay + 1.5); // Long fade out
-        
+        gainNode.gain.linearRampToValueAtTime(1.0, audioCtx.currentTime + delay + 0.05);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + delay + 1.5);
+
         osc.connect(gainNode);
         gainNode.connect(audioCtx.destination);
-        
+
         osc.start(audioCtx.currentTime + delay);
         osc.stop(audioCtx.currentTime + delay + 1.6);
       };
 
-      // Ding (High) -> Dong (Low)
-      playChime(880, 0);   // A5
-      playChime(659.25, 0.4); // E5
+      playChime(880, 0);
+      playChime(659.25, 0.4);
     }
   } catch (err) {
     console.warn("Failed to play sound synthesis", err);
   }
 };
 
-// ── Helpers extracted to reduce Tracker CC ────────────────────────────────────
-
 const sendNativeNotification = (title: string, body: string) => {
   if (typeof window === "undefined" || !("Notification" in window) || Notification.permission !== "granted") return;
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.ready.then(reg =>
+    navigator.serviceWorker.ready.then((reg) =>
       reg?.showNotification(title, { body, icon: "/favicon.ico", vibrate: [200, 100, 200] } as any)
     );
   } else {
-    try { new Notification(title, { body, icon: "/favicon.ico" }); }
-    catch (e) { console.warn("Mobile browser blocked Notification constructor", e); }
+    try {
+      new Notification(title, { body, icon: "/favicon.ico" });
+    } catch (e) {
+      console.warn("Mobile browser blocked Notification constructor", e);
+    }
   }
 };
 
@@ -137,8 +146,11 @@ const loadClinicDetails = (
 ) => {
   const authHeader = token ? `Bearer ${token}` : "";
   fetch(`${apiBase}/api/clinic-metadata/${activeAppt.doctorId}`, { headers: { Authorization: authHeader } })
-    .then(r => { if (!r.ok) throw new Error("Clinic details unreachable"); return r.json(); })
-    .then(metadata => {
+    .then((r) => {
+      if (!r.ok) throw new Error("Clinic details unreachable");
+      return r.json();
+    })
+    .then((metadata) => {
       setClinicDetails({
         doctorName: activeAppt.doctorName || "Loading...",
         speciality: activeAppt.specialty || activeAppt.speciality || "General Medicine",
@@ -162,12 +174,14 @@ const loadClinicDetails = (
     );
 
   fetch(`${apiBase}/api/availability/doctor/${activeAppt.doctorId}`, { headers: { Authorization: authHeader } })
-    .then(r => r.json())
-    .then(availData => {
+    .then((r) => r.json())
+    .then((availData) => {
       if (Array.isArray(availData)) {
         const avail = availData.find((a: any) => a.date === activeAppt.date);
         if (avail) {
-          setClinicDetails((prev: any) => prev ? { ...prev, startTime: avail.startTime || null, endTime: avail.endTime || null } : null);
+          setClinicDetails((prev: any) =>
+            prev ? { ...prev, startTime: avail.startTime || null, endTime: avail.endTime || null } : null
+          );
         }
       }
     })
@@ -179,12 +193,605 @@ const resolveWalkInTime = (
   clinicDetails: any,
   tokensAhead: number
 ): { h: number; m: number } => {
-  const startStr = clinicOpensAt || clinicDetails?.startTime || '11:55';
+  const startStr = clinicOpensAt || clinicDetails?.startTime || "11:55";
   let [h, m] = startStr.trim().split(":").map(Number);
   if (Number.isNaN(h)) h = 11;
   if (Number.isNaN(m)) m = 55;
   return { h, m };
 };
+
+const formatTime24Hour = (timeStr: string | undefined | null): string => {
+  if (!timeStr) return "Loading...";
+  const parts = timeStr.trim().split(":");
+  let h = Number(parts[0]);
+  let m = Number(parts[1]) || 0;
+  if (Number.isNaN(h) || Number.isNaN(m)) return "Loading...";
+  return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+};
+
+const calculatePhase = (isCanceled: boolean, diffMs: number): Phase => {
+  if (isCanceled) return "CANCELED";
+  if (diffMs <= 0) return "READY";
+  if (diffMs < 60 * 60 * 1000) return "LIVE";
+  if (diffMs < 24 * 60 * 60 * 1000) return "ACTIVE_DAY";
+  return "SCHEDULED";
+};
+
+const handleTrackerWsMessage = (
+  msg: any,
+  bookingInfo: any,
+  setLiveQueue: (q: any[]) => void,
+  setCurrentQueueLength: (len: number) => void,
+  setCurrentServing: (serving: number) => void,
+  setIsArrived: (v: boolean) => void,
+  setIsRinging: (v: boolean) => void,
+  setNotification: (n: any) => void,
+  navigate: (path: string, opts?: any) => void
+) => {
+  const normalize = (val: any) => String(val || "").trim().toLowerCase();
+  const targetPatientId = normalize(msg.patientId);
+  const myPatientId = normalize(bookingInfo.patientId);
+  const myApptId = normalize(bookingInfo.id);
+  const targetName = normalize(msg.patientName);
+  const myName = normalize(bookingInfo.patientName);
+
+  const isMatch =
+    (targetPatientId && (targetPatientId === myPatientId || targetPatientId === myApptId)) ||
+    (targetName && targetName === myName);
+
+  if (msg.type === "QUEUE_SYNC") {
+    setLiveQueue(msg.patients || []);
+    setCurrentQueueLength(msg.patients?.length || 0);
+    const myEntry = (msg.patients || []).find(
+      (p: any) => normalize(p.patientId) === myPatientId || (p.patientName && normalize(p.patientName) === myName)
+    );
+    if (myEntry) {
+      setCurrentServing(msg.patients[0]?.tokenNumber || 1);
+      if (myEntry.status === APP_STATUS.ARRIVED) setIsArrived(true);
+    }
+  } else if (msg.type === "CALL_PATIENT" && isMatch) {
+    setIsRinging(true);
+    const msgText = msg.message || "URGENT: Please report to the Mediator desk immediately.";
+    setNotification({ message: msgText, urgent: true });
+    sendNativeNotification("Urgent Mediator Alert", msgText);
+    const ringInterval = setInterval(() => {
+      playNotificationSound("bell");
+    }, 3000);
+    (window as any)._ringInterval = ringInterval;
+  } else if (msg.type === "SIGNAL_PATIENT" && isMatch) {
+    const msgText = msg.message || "You are NEXT: Please prepare to enter the clinic.";
+    setNotification({ message: msgText, urgent: false, isTurnSignal: true });
+    sendNativeNotification("Mediator Queue Alert", msgText);
+    playNotificationSound("beep");
+    setTimeout(() => setNotification(null), 20000);
+  } else if ((msg.type === "PATIENT_DISCHARGED" || msg.type === "DISCHARGE") && isMatch) {
+    localStorage.removeItem("bookingInfo");
+    localStorage.setItem("hadAppointmentToday", "true");
+    if ((window as any)._ringInterval) {
+      clearInterval((window as any)._ringInterval);
+    }
+    navigate("/patient-portal?completed=true", { replace: true });
+  }
+};
+
+// ── Subcomponents for Tracker Page ──────────────────────────────────────────
+
+const TrackerHeader = ({
+  clinicDetails,
+  bookingInfo,
+  darkMode,
+  setDarkMode,
+  navigate,
+  handleLogout,
+}: any) => (
+  <header className="flex flex-col sm:flex-row justify-between items-center mb-12 gap-6 sm:gap-0">
+    <div className="flex items-center gap-6">
+      <button
+        onClick={() => {
+          sessionStorage.removeItem("selectedPatient");
+          navigate("/patient-portal");
+        }}
+        className="p-3 rounded-2xl bg-emerald-500 text-white shadow-sm hover:scale-105 transition-all"
+        title="Back to Portal"
+      >
+        <ChevronLeft size={24} />
+      </button>
+      <div>
+        <h1
+          className={`text-2xl font-bold tracking-tight flex items-center gap-3 italic ${
+            darkMode ? "text-white" : "text-slate-900"
+          }`}
+        >
+          Patient Tracker
+          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+        </h1>
+        <p className={`font-bold uppercase text-[10px] tracking-[0.2em] mt-1 ${darkMode ? "text-slate-400" : "text-slate-500"}`}>
+          Physician: {clinicDetails?.doctorName || bookingInfo.doctorName || "Loading..."}
+        </p>
+      </div>
+    </div>
+
+    <div className="flex items-center gap-3">
+      <button
+        onClick={() => setDarkMode(!darkMode)}
+        className="p-3 rounded-2xl bg-emerald-500 text-white shadow-sm hover:scale-105 transition-all"
+        title="Toggle Theme"
+      >
+        {darkMode ? <Sun size={20} className="text-amber-300" /> : <Moon size={20} className="text-blue-200" />}
+      </button>
+      <button
+        onClick={handleLogout}
+        className="p-3 rounded-2xl bg-emerald-500 text-white shadow-sm hover:scale-105 transition-all"
+        title="Logout"
+      >
+        <LogOut size={18} />
+      </button>
+    </div>
+  </header>
+);
+
+const TrackerAccessTierBadge = ({ isPremium, bookingInfo, darkMode }: any) => {
+  if (isPremium) {
+    return (
+      <div
+        className={`mb-8 p-6 rounded-[32px] border transition-all ${
+          darkMode
+            ? "bg-gradient-to-br from-emerald-500/10 to-transparent border-emerald-500/20 text-emerald-300"
+            : "bg-emerald-500/20 border-emerald-500/30 text-emerald-800"
+        }`}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
+                darkMode ? "bg-emerald-500/10 text-emerald-400" : "bg-emerald-500/20 text-emerald-700"
+              }`}
+            >
+              <Crown size={20} />
+            </div>
+            <div>
+              <p className={`text-[10px] font-black uppercase tracking-widest ${darkMode ? "text-emerald-400" : "text-emerald-700"}`}>
+                Premium Access
+              </p>
+              <p className={`text-sm font-bold mt-0.5 ${darkMode ? "text-slate-300" : "text-slate-800"}`}>
+                Your Slot: {formatTime24Hour(bookingInfo.timeSlot || bookingInfo.time || "Scheduled")}
+              </p>
+            </div>
+          </div>
+          <span
+            className={`text-[10px] font-black px-4 py-2 rounded-full border ${
+              darkMode
+                ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                : "bg-emerald-500/20 border-emerald-500/30 text-emerald-700"
+            } uppercase tracking-widest`}
+          >
+            Elite Tier
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`mb-8 p-6 rounded-[32px] border transition-all ${
+        darkMode
+          ? "bg-gradient-to-br from-slate-500/10 to-transparent border-white/5 text-slate-300"
+          : "bg-slate-300/80 border-slate-400/40 text-slate-700"
+      }`}
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div
+            className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
+              darkMode ? "bg-slate-500/10 text-slate-400" : "bg-slate-400/20 text-slate-600"
+            }`}
+          >
+            <Users size={20} />
+          </div>
+          <div>
+            <p className={`text-[10px] font-black uppercase tracking-widest ${darkMode ? "text-slate-400" : "text-slate-600"}`}>
+              Standard Access
+            </p>
+            <p className={`text-sm font-bold mt-0.5 ${darkMode ? "text-white" : "text-slate-800"}`}>
+              Token #{bookingInfo.tokenNumber}
+            </p>
+          </div>
+        </div>
+        <span
+          className={`text-[10px] font-black px-4 py-2 rounded-full border ${
+            darkMode ? "bg-slate-500/10 border-white/5 text-slate-400" : "bg-slate-400/20 border-slate-400/30 text-slate-600"
+          } uppercase tracking-widest`}
+        >
+          General
+        </span>
+      </div>
+    </div>
+  );
+};
+
+const TrackerCountdownHero = ({
+  phase,
+  pc,
+  darkMode,
+  telemetryError,
+  handleRebook,
+  countDays,
+  countHours,
+  countMinutes,
+  countSeconds,
+  bookingInfo,
+  clinicDetails,
+  isPremium,
+}: any) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    className={`rounded-[48px] border transition-all p-10 shadow-sm relative overflow-hidden ${
+      darkMode ? "bg-gradient-to-br " + pc.bg + " " + pc.border : "bg-slate-300/90 border border-white/35"
+    }`}
+  >
+    <div className="flex items-center gap-3 mb-6">
+      <div
+        className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.2em] leading-none border ${
+          darkMode ? "text-emerald-400 bg-white/5 border-white/10" : "text-slate-700 bg-white/40 border border-white/50"
+        }`}
+      >
+        <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 mr-2 animate-pulse" />
+        {pc.label}
+      </div>
+      <div
+        className={`px-3 py-1.5 rounded-full border text-[9px] font-black uppercase tracking-[0.2em] leading-none ${
+          darkMode ? "bg-white/5 border-white/10 text-slate-500" : "bg-white/40 border border-white/50 text-slate-600"
+        }`}
+      >
+        {isPremium ? "Elite" : "General"}
+      </div>
+    </div>
+
+    {telemetryError && (
+      <div
+        className={`mb-6 p-4 rounded-2xl border text-xs font-bold flex items-center gap-2 animate-pulse ${
+          darkMode ? "bg-rose-500/10 border-rose-500/20 text-rose-400" : "bg-rose-500/10 border-rose-500/20 text-rose-600"
+        }`}
+      >
+        <AlertTriangle size={16} />
+        <span>{telemetryError}</span>
+      </div>
+    )}
+
+    {phase === "CANCELED" ? (
+      <div className="text-center py-6">
+        <div className="inline-flex items-center justify-center w-20 h-20 rounded-full mb-4 border bg-rose-500/20 border-rose-500/30">
+          <AlertTriangle size={36} className="text-rose-600" />
+        </div>
+        <h2 className="text-3xl font-black text-rose-700 tracking-tight mb-2">Booking Canceled</h2>
+        <p className="text-sm text-slate-600 mb-6 font-semibold uppercase tracking-wider">
+          This appointment has been canceled. You can rebook below.
+        </p>
+        <button
+          onClick={handleRebook}
+          className="px-8 py-4 rounded-2xl bg-rose-600 text-white font-black text-sm uppercase tracking-widest hover:bg-rose-500 transition-all shadow-lg shadow-rose-500/20"
+        >
+          Rebook Now
+        </button>
+      </div>
+    ) : phase === "SCHEDULED" ? (
+      <div className="space-y-2">
+        <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Appointment In</p>
+        <div
+          className={`text-5xl sm:text-6xl font-black italic tracking-tighter leading-none ${
+            darkMode ? pc.accent : "text-white"
+          }`}
+          style={{ fontVariantNumeric: "tabular-nums" }}
+        >
+          {countDays}d {countHours}h
+        </div>
+        <div className="flex items-center gap-2 mt-4">
+          <CalendarClock size={14} className={darkMode ? pc.accent : "text-slate-600"} />
+          <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">
+            {bookingInfo.date} at {bookingInfo.time || formatTime24Hour(clinicDetails?.startTime)}
+          </p>
+        </div>
+      </div>
+    ) : phase === "ACTIVE_DAY" ? (
+      <div className="space-y-2">
+        <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Prepare — Arriving In</p>
+        <div
+          className={`text-5xl sm:text-6xl font-black italic tracking-tighter leading-none ${
+            darkMode ? pc.accent : "text-white"
+          }`}
+          style={{ fontVariantNumeric: "tabular-nums" }}
+        >
+          {countHours}h {countMinutes.toString().padStart(2, "0")}m
+        </div>
+        <div className="flex items-center gap-2 mt-4">
+          <Clock size={14} className={darkMode ? pc.accent : "text-slate-600"} />
+          <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">
+            Time to depart in {Math.max(0, countHours * 60 + countMinutes - 30)} min
+          </p>
+        </div>
+      </div>
+    ) : phase === "LIVE" ? (
+      <div className="space-y-2">
+        <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Time to Arrive</p>
+        <div
+          className={`text-5xl sm:text-7xl font-black italic tracking-tighter leading-none ${
+            darkMode ? pc.accent : "text-white"
+          }`}
+          style={{ fontVariantNumeric: "tabular-nums" }}
+        >
+          {countMinutes.toString().padStart(2, "0")}:{countSeconds.toString().padStart(2, "0")}
+        </div>
+        <div className="flex items-center gap-2 mt-4">
+          <Activity size={14} className="text-emerald-600 animate-pulse" />
+          <p className="text-emerald-700 text-[10px] font-bold uppercase tracking-widest">Live Countdown Active</p>
+        </div>
+      </div>
+    ) : (
+      <div className="space-y-2">
+        <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Status</p>
+        <h2 className={`text-4xl sm:text-5xl font-black italic tracking-tighter leading-none ${darkMode ? "text-emerald-400" : "text-white"}`}>
+          READY
+        </h2>
+        <div className="flex items-center gap-2 mt-4">
+          <Sparkles size={14} className="text-emerald-600 animate-pulse" />
+          <p className="text-emerald-700 text-[10px] font-bold uppercase tracking-widest">Your Session is Ready</p>
+        </div>
+      </div>
+    )}
+  </motion.div>
+);
+
+const TrackerTravelProtocol = ({
+  darkMode,
+  clinicOpensTimeStr,
+  isPremium,
+  bookingInfo,
+  appointmentDateTime,
+  leaveHomeTime,
+  travelTime,
+  arrivalTime,
+  safetyBuffer,
+}: any) => (
+  <div className="mt-8 space-y-4">
+    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 px-2">
+      Travel & Logistics Protocol
+    </p>
+
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div
+        className={`p-6 rounded-[32px] border transition-all ${
+          darkMode ? "bg-gradient-to-br from-white/5 to-transparent border-white/5" : "bg-white/40 border border-white/50"
+        }`}
+      >
+        <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Clinic Opens</p>
+        <p className={`text-2xl font-black mt-2 ${darkMode ? "text-white" : "text-slate-900"}`}>{clinicOpensTimeStr}</p>
+        <p className="text-[10px] text-slate-400 mt-2 uppercase font-semibold">Doctor's hours start</p>
+      </div>
+
+      <div
+        className={`p-6 rounded-[32px] border transition-all ${
+          darkMode ? "bg-gradient-to-br from-white/5 to-transparent border-white/5" : "bg-white/40 border border-white/50"
+        }`}
+      >
+        <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">
+          {isPremium ? "Your Appointment" : "Est. Turn Time"}
+        </p>
+        <p className={`text-2xl font-black mt-2 ${darkMode ? "text-white" : "text-slate-900"}`}>
+          {isPremium
+            ? formatTime24Hour(bookingInfo.timeSlot || bookingInfo.time || "13:30")
+            : appointmentDateTime.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false })}
+        </p>
+        <p className="text-[10px] text-slate-400 mt-2 uppercase font-semibold">
+          {isPremium ? "Your scheduled slot" : "Based on live queue"}
+        </p>
+      </div>
+
+      <div
+        className={`p-6 rounded-[32px] border transition-all flex flex-col justify-between ${
+          darkMode ? "bg-gradient-to-br from-white/5 to-transparent border-white/5" : "bg-white/40 border border-white/50"
+        }`}
+      >
+        <div>
+          <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Leave Home</p>
+          <p className={`text-2xl font-black mt-2 ${darkMode ? "text-white" : "text-slate-900"}`}>{leaveHomeTime}</p>
+        </div>
+        <div className={`border-t pt-3 mt-3 ${darkMode ? "border-white/5" : "border-slate-200"}`}>
+          <p className="text-[8px] font-black uppercase tracking-widest text-slate-500">Est. Travel</p>
+          <p className="text-sm font-black text-emerald-400">{travelTime} mins</p>
+        </div>
+      </div>
+
+      <div
+        className={`p-6 rounded-[32px] border transition-all flex flex-col justify-between ${
+          darkMode ? "bg-gradient-to-br from-white/5 to-transparent border-white/5" : "bg-white/40 border border-white/50"
+        }`}
+      >
+        <div>
+          <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Arrive At</p>
+          <p className={`text-2xl font-black mt-2 ${darkMode ? "text-white" : "text-slate-900"}`}>{arrivalTime}</p>
+        </div>
+        <div className={`border-t pt-3 mt-3 ${darkMode ? "border-white/5" : "border-slate-200"}`}>
+          <p className="text-[8px] font-black uppercase tracking-widest text-slate-500">Safety Buffer</p>
+          <p className="text-sm font-black text-emerald-400">{safetyBuffer} mins</p>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+const TrackerAppointmentDetails = ({
+  detailsExpanded,
+  setDetailsExpanded,
+  darkMode,
+  bookingInfo,
+  clinicDetails,
+}: any) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ delay: 0.1 }}
+    className={`rounded-[48px] border overflow-hidden transition-all shadow-sm ${
+      darkMode
+        ? "bg-gradient-to-br from-white/5 via-transparent to-transparent border-white/5"
+        : "bg-white/40 border border-white/50"
+    }`}
+  >
+    <button
+      onClick={() => setDetailsExpanded(!detailsExpanded)}
+      className={`w-full flex items-center justify-between p-6 transition-colors ${
+        darkMode ? "hover:bg-white/5" : "hover:bg-white/30"
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 rounded-xl bg-slate-400/20 flex items-center justify-center text-slate-600">
+          <Stethoscope size={16} />
+        </div>
+        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Appointment Details</span>
+      </div>
+      {detailsExpanded ? <ChevronUp size={16} className="text-slate-500" /> : <ChevronDown size={16} className="text-slate-500" />}
+    </button>
+
+    <AnimatePresence>
+      {detailsExpanded && (
+        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+          <div className="px-6 pb-6 space-y-5">
+            <div className="flex items-start gap-3">
+              <User className="w-5 h-5 mt-0.5 shrink-0 text-slate-600" />
+              <div>
+                <p className="text-xs font-black uppercase text-slate-500 tracking-wider">Patient Name</p>
+                <p className={`font-bold ${darkMode ? "text-slate-200" : "text-slate-800"}`}>{bookingInfo.patientName || "Guest"}</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <Clock className="w-5 h-5 mt-0.5 shrink-0 text-slate-600" />
+              <div>
+                <p className="text-xs font-black uppercase text-slate-500 tracking-wider">Clinical Date</p>
+                <p className={`font-bold ${darkMode ? "text-slate-200" : "text-slate-800"}`}>{bookingInfo.date}</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <Stethoscope className="w-5 h-5 mt-0.5 shrink-0 text-slate-600" />
+              <div>
+                <p className="text-xs font-black uppercase text-slate-500 tracking-wider">Doctor / Speciality</p>
+                <p className={`font-bold ${darkMode ? "text-slate-200" : "text-slate-800"}`}>
+                  {clinicDetails?.doctorName || bookingInfo.doctorName || "Loading..."} ({clinicDetails?.speciality || bookingInfo.specialty || "General Medicine"})
+                </p>
+              </div>
+            </div>
+            {bookingInfo.tokenNumber && (
+              <div className="flex items-start gap-3">
+                <Ticket className="w-5 h-5 mt-0.5 shrink-0 text-slate-600" />
+                <div>
+                  <p className="text-xs font-black uppercase text-slate-500 tracking-wider">Token Number</p>
+                  <p className={`font-black text-lg ${darkMode ? "text-slate-200" : "text-slate-800"}`}>
+                    #{bookingInfo.tokenNumber}
+                  </p>
+                </div>
+              </div>
+            )}
+            {clinicDetails && (
+              <div className="border-t border-slate-300/80 pt-5 space-y-4">
+                <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">Clinic Infrastructure</span>
+                <div className="flex items-start gap-3">
+                  <MapPin className="w-5 h-5 mt-0.5 shrink-0 text-slate-600" />
+                  <div>
+                    <p className="text-xs font-black uppercase text-slate-500 tracking-wider">Address</p>
+                    <p className={`font-bold text-sm ${darkMode ? "text-slate-200" : "text-slate-800"}`}>{clinicDetails.clinicAddress}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Pill className="w-5 h-5 mt-0.5 shrink-0 text-slate-600" />
+                  <div>
+                    <p className="text-xs font-black uppercase text-slate-500 tracking-wider">On-site Pharmacy</p>
+                    <p className={`font-bold ${darkMode ? "text-slate-200" : "text-slate-800"}`}>{clinicDetails.pharmacy}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 text-sm">
+                  <span style={{ fontSize: 18 }}>♿</span>
+                  <span className={`font-bold ${darkMode ? "text-slate-200" : "text-slate-800"}`}>
+                    Wheelchair: {clinicDetails.wheelchairAccess ? "✓ Accessible" : "Not Available"}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  </motion.div>
+);
+
+const TrackerFloatingCheckIn = ({
+  isBeforeOpening,
+  isArrived,
+  handleArrival,
+  darkMode,
+  clinicOpensTimeStr,
+  getOpeningCountdownStr,
+}: any) => (
+  <div
+    className={`fixed bottom-0 left-0 right-0 p-6 pt-20 pointer-events-none z-40 bg-gradient-to-t ${
+      darkMode ? "from-[#0A0F1E] via-[#0A0F1E]/90" : "from-[#cbd5e1] via-[#cbd5e1]/95"
+    } to-transparent`}
+  >
+    <div className="max-w-md mx-auto pointer-events-auto">
+      {isBeforeOpening ? (
+        <div
+          className={`w-full h-24 rounded-[40px] border flex flex-col items-center justify-center gap-1 cursor-not-allowed shadow-sm ${
+            darkMode ? "bg-gradient-to-br from-white/5 to-transparent border-white/5" : "bg-white/40 border border-white/50"
+          }`}
+        >
+          <div className="flex items-center gap-3 text-slate-600">
+            <Clock className="w-6 h-6 animate-pulse text-blue-600" />
+            <span
+              className={`text-2xl font-black tracking-tighter uppercase italic ${darkMode ? "text-blue-400" : "text-slate-700"}`}
+              style={{ fontVariantNumeric: "tabular-nums" }}
+            >
+              OPENS IN {getOpeningCountdownStr()}
+            </span>
+          </div>
+          <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest leading-none mt-1">
+            Clinic Opening Time: {clinicOpensTimeStr}
+          </span>
+        </div>
+      ) : !isArrived ? (
+        <button
+          onClick={handleArrival}
+          className="group relative w-full h-24 overflow-hidden rounded-[40px] bg-emerald-500 active:scale-95 transition-all duration-300 shadow-lg shadow-emerald-500/20"
+        >
+          <div className="absolute inset-0 bg-emerald-400 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
+          <div className="relative flex flex-col items-center justify-center gap-1">
+            <div className="flex items-center gap-3 text-white transition-colors">
+              <MapPin className="w-8 h-8 animate-bounce fill-current" />
+              <span className="text-2xl font-black tracking-tighter uppercase italic">CLINIC CHECK-IN</span>
+            </div>
+            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-100 group-hover:text-white transition-colors">
+              Tactical Deployment Phase — Open
+            </span>
+          </div>
+        </button>
+      ) : (
+        <div
+          className={`w-full h-24 rounded-[40px] border flex flex-col items-center justify-center gap-1 ${
+            darkMode
+              ? "bg-gradient-to-br from-emerald-500/10 to-transparent border-emerald-500/20"
+              : "bg-emerald-500/20 border-emerald-500/30 text-emerald-800"
+          }`}
+        >
+          <div className="flex items-center gap-2 text-emerald-700">
+            <Sparkles size={24} className="fill-current animate-pulse animate-spin" />
+            <span className="text-xl font-black uppercase tracking-tighter">Check-in Verified</span>
+          </div>
+          <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">
+            Wait for specialized directive
+          </span>
+        </div>
+      )}
+    </div>
+  </div>
+);
 
 export default function Tracker() {
   const navigate = useNavigate();
@@ -193,7 +800,7 @@ export default function Tracker() {
   const bookingInfo = appointmentData;
 
   const [currentServing, setCurrentServing] = useState(1);
-  const [liveQueue, setLiveQueue] = useState<any[]>([]);
+  const [, setLiveQueue] = useState<any[]>([]);
   const [currentQueueLength, setCurrentQueueLength] = useState(0);
   const [isOvertime, setIsOvertime] = useState(false);
   const lastProcessedMessageRef = useRef<any>(null);
@@ -205,93 +812,11 @@ export default function Tracker() {
   const [isCanceled, setIsCanceled] = useState(false);
   const [isRinging, setIsRinging] = useState(false);
 
-  /* Issue 6: Smart ETA state */
   const [smartETA, setSmartETA] = useState<string | null>(null);
   const [clinicOpensAt, setClinicOpensAt] = useState<string | null>(null);
   const [telemetryError, setTelemetryError] = useState<string | null>(null);
   const [travelTime, setTravelTime] = useState<number>(20);
   const [safetyBuffer, setSafetyBuffer] = useState<number>(10);
-
-  const [msUntilCheckIn, setMsUntilCheckIn] = useState(Infinity);
-  const [checkInOpen, setCheckInOpen]       = useState(false);
-  const [verified, setVerified]             = useState(false);
-  const [checkInOpenTimeStr, setCheckInOpenTimeStr] = useState('');
-
-  useEffect(() => {
-    if (!bookingInfo?.timeSlot) return;
-    const tick = () => {
-      const [h, m] = bookingInfo.timeSlot.split(':').map(Number);
-      const apptMs = new Date().setHours(h, m, 0, 0);
-      const openMs = apptMs - 15 * 60000;
-      const remaining = openMs - Date.now();
-      setCheckInOpenTimeStr(new Date(openMs).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false}));
-      remaining <= 0 ? setCheckInOpen(true) : (setCheckInOpen(false), setMsUntilCheckIn(remaining));
-    };
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [bookingInfo?.timeSlot]);
-
-  const fmt = (ms: number) => {
-    const s = Math.floor(ms / 1000);
-    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
-    return h > 0 ? `${h}h ${m}m ${sec}s` : m > 0 ? `${m}m ${sec}s` : `${sec}s`;
-  };
-
-  const handleCheckIn = async () => {
-    try {
-      const r = await fetch(`${API}/api/appointments/${bookingInfo.id}/check-in`, { method:'POST' });
-      if (r.ok) setVerified(true); else throw new Error('Check-in failed');
-    } catch (e: any) { alert(e.message); }
-  };
-
-  /* ── Theme sync ───────────────────────────────────────────── */
-  useEffect(() => {
-    document.documentElement.dataset.theme = darkMode ? "dark" : "light";
-  }, [darkMode]);
-
-  /* ── Live clock (1 s tick) & Overtime Logic ────────────────── */
-  useEffect(() => {
-    const timer = setInterval(() => {
-        const now = new Date();
-        setCurrentTime(now);
-
-        // Check for Overtime
-        if (clinicDetails?.endTime) {
-            const localTodayStr = now.toLocaleDateString("en-CA");
-            if (bookingInfo?.date && bookingInfo.date !== localTodayStr) {
-                setIsOvertime(false);
-            } else {
-                let endTime = new Date(now);
-                const [eh, em, es] = clinicDetails.endTime.split(":").map(Number);
-                endTime.setHours(eh, em || 0, es || 0, 0);
-
-                if (now.getTime() > endTime.getTime() && currentQueueLength > 0) {
-                    setIsOvertime(true);
-                } else {
-                    setIsOvertime(false);
-                }
-            }
-        }
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [clinicDetails, currentQueueLength]);
-
-  /* ── WebSocket: queue sync + emergency alerts ─────────────── */
-  const API = (import.meta as any).env.VITE_API_URL || "https://online-queue-project.onrender.com";
-  const socketUrl = API.replace("http", "ws") + "/ws-queue";
-  const { lastJsonMessage, sendMessage } = useWebSocket(socketUrl, {
-    shouldReconnect: () => true,
-    reconnectAttempts: 9999,
-    reconnectInterval: 3000,
-    share: true,
-    heartbeat: {
-      message: JSON.stringify({ type: 'ping' }),
-      returnMessage: JSON.stringify({ type: 'pong' }),
-      timeout: 10000,
-      interval: 15000,
-    }
-  });
 
   const [notification, setNotification] = useState<{
     message: string;
@@ -300,65 +825,70 @@ export default function Tracker() {
   } | null>(null);
 
   useEffect(() => {
+    document.documentElement.dataset.theme = darkMode ? "dark" : "light";
+  }, [darkMode]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = new Date();
+      setCurrentTime(now);
+
+      if (clinicDetails?.endTime) {
+        const localTodayStr = now.toLocaleDateString("en-CA");
+        if (bookingInfo?.date && bookingInfo.date !== localTodayStr) {
+          setIsOvertime(false);
+        } else {
+          let endTime = new Date(now);
+          const [eh, em, es] = clinicDetails.endTime.split(":").map(Number);
+          endTime.setHours(eh, em || 0, es || 0, 0);
+
+          if (now.getTime() > endTime.getTime() && currentQueueLength > 0) {
+            setIsOvertime(true);
+          } else {
+            setIsOvertime(false);
+          }
+        }
+      }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [clinicDetails, currentQueueLength, bookingInfo?.date]);
+
+  const API = (import.meta as any).env.VITE_API_URL || "https://online-queue-project.onrender.com";
+  const socketUrl = API.replace("http", "ws") + "/ws-queue";
+  const { lastJsonMessage, sendMessage } = useWebSocket(socketUrl, {
+    shouldReconnect: () => true,
+    reconnectAttempts: 9999,
+    reconnectInterval: 3000,
+    share: true,
+    heartbeat: {
+      message: JSON.stringify({ type: "ping" }),
+      returnMessage: JSON.stringify({ type: "pong" }),
+      timeout: 10000,
+      interval: 15000,
+    },
+  });
+
+  useEffect(() => {
     if (!lastJsonMessage) return;
     const msg = lastJsonMessage as any;
     if (!msg || !bookingInfo) return;
 
-    const normalize = (val: any) => String(val || "").trim().toLowerCase();
-    const targetPatientId = normalize(msg.patientId);
-    const myPatientId = normalize(bookingInfo.patientId);
-    const myApptId = normalize(bookingInfo.id);
-    const targetName = normalize(msg.patientName);
-    const myName = normalize(bookingInfo.patientName);
-
-    const isMatch =
-      (targetPatientId && (targetPatientId === myPatientId || targetPatientId === myApptId)) ||
-      (targetName && targetName === myName);
-
-    if (msg.type === "QUEUE_SYNC") {
-      setLiveQueue(msg.patients || []);
-      setCurrentQueueLength(msg.patients?.length || 0);
-      const myEntry = (msg.patients || []).find(
-        (p: any) =>
-          normalize(p.patientId) === myPatientId ||
-          (p.patientName && normalize(p.patientName) === myName)
+    if (msg !== lastProcessedMessageRef.current) {
+      lastProcessedMessageRef.current = msg;
+      handleTrackerWsMessage(
+        msg,
+        bookingInfo,
+        setLiveQueue,
+        setCurrentQueueLength,
+        setCurrentServing,
+        setIsArrived,
+        setIsRinging,
+        setNotification,
+        navigate
       );
-      if (myEntry) {
-        setCurrentServing(msg.patients[0]?.tokenNumber || 1);
-        if (myEntry.status === APP_STATUS.ARRIVED) setIsArrived(true);
-      }
-    } else if (msg.type === "CALL_PATIENT" && isMatch) {
-      setIsRinging(true);
-      const msgText = msg.message || "URGENT: Please report to the Mediator desk immediately.";
-      setNotification({ message: msgText, urgent: true });
-      sendNativeNotification("Urgent Mediator Alert", msgText);
-      const ringInterval = setInterval(() => { playNotificationSound("bell"); }, 3000);
-      (window as any)._ringInterval = ringInterval;
-    } else if (msg.type === "SIGNAL_PATIENT" && isMatch) {
-      const msgText = msg.message || "You are NEXT: Please prepare to enter the clinic.";
-      setNotification({ message: msgText, urgent: false, isTurnSignal: true });
-      sendNativeNotification("Mediator Queue Alert", msgText);
-      playNotificationSound("beep");
-      setTimeout(() => setNotification(null), 20000);
-    } else if ((msg.type === "PATIENT_DISCHARGED" || msg.type === "DISCHARGE") && isMatch) {
-      console.log("[Tracker] Patient discharged event received. Redirecting to portal.");
-      localStorage.removeItem("bookingInfo");
-      localStorage.setItem("hadAppointmentToday", "true");
-      if ((window as any)._ringInterval) {
-        clearInterval((window as any)._ringInterval);
-      }
-      navigate("/patient-portal?completed=true", { replace: true });
     }
-  }, [lastJsonMessage, bookingInfo]);
+  }, [lastJsonMessage, bookingInfo, navigate]);
 
-  // Request browser notification permission on mount
-  // Removed because mobile Chrome blocks auto-prompting without a user gesture.
-  // We now have a manual "Allow Push" button in the UI instead.
-  useEffect(() => {
-    // Intentionally empty
-  }, []);
-
-  /* Issue 6: Fetch Smart ETA when appointment is loaded */
   useEffect(() => {
     if (bookingInfo?.id) {
       fetch(`${API}/api/appointments/${bookingInfo.id}/eta`)
@@ -389,7 +919,6 @@ export default function Tracker() {
     }
   }, [bookingInfo?.id, API]);
 
-  /* ── Load booking + session validation ────────────────────── */
   useEffect(() => {
     const fetchActiveSession = async () => {
       setLoading(true);
@@ -407,7 +936,6 @@ export default function Tracker() {
         }
 
         if (!patientId) {
-          console.warn("[Tracker] No patient identifier found. Redirecting to portal.");
           navigate("/patient-portal");
           return;
         }
@@ -419,7 +947,6 @@ export default function Tracker() {
         const apiBase = (import.meta as any).env.VITE_API_URL || "https://online-queue-project.onrender.com";
         const checkActiveUrl = `${apiBase}/api/appointments/patient/${patientId}/check-active`;
 
-        console.log(`[Tracker] Syncing Active Appointment from: ${checkActiveUrl}`);
         const resp = await fetch(checkActiveUrl, {
           headers: { Authorization: token ? `Bearer ${token}` : "" },
         });
@@ -433,7 +960,6 @@ export default function Tracker() {
           const data = await resp.json();
           const activeAppt = data.todayAppointment || data.nextActiveAppointment;
           if (activeAppt) {
-            console.log("[Tracker] Active session successfully loaded:", activeAppt);
             setAppointmentData(activeAppt);
             localStorage.setItem("bookingInfo", JSON.stringify(activeAppt));
 
@@ -444,16 +970,13 @@ export default function Tracker() {
               setIsCanceled(true);
             }
 
-            // Sync clinic details
             if (activeAppt.doctorId) {
               loadClinicDetails(activeAppt, apiBase, token, setClinicDetails);
             }
           } else {
-            console.warn("[Tracker] No active appointment found on backend.");
             navigate("/patient-portal");
           }
         } else {
-          console.error("[Tracker] Failed to load active session:", resp.status);
           if (info) {
             const parsed = JSON.parse(info);
             setAppointmentData(parsed);
@@ -464,7 +987,6 @@ export default function Tracker() {
           }
         }
       } catch (err) {
-        console.error("[Tracker] Error resolving active session:", err);
         setTelemetryError("Active session sync offline. Retrying...");
         if (info) {
           const parsed = JSON.parse(info);
@@ -482,7 +1004,6 @@ export default function Tracker() {
     fetchActiveSession();
   }, [navigate]);
 
-  /* ── Live session validation interval ────────────────────── */
   useEffect(() => {
     if (!appointmentData) return;
 
@@ -503,10 +1024,7 @@ export default function Tracker() {
           headers: { Authorization: token ? `Bearer ${token}` : "" },
         });
 
-        if (!queueResp.ok) {
-          console.error("[Tracker] Queue validation fetch failed:", queueResp.status);
-          return;
-        }
+        if (!queueResp.ok) return;
 
         const queue: any[] = await queueResp.json();
         const inQueue = queue.some((e: any) => {
@@ -516,7 +1034,6 @@ export default function Tracker() {
         });
 
         if (!inQueue) {
-          console.log("[Tracker] Patient absent from live queue — appointment complete. Redirecting.");
           localStorage.removeItem("bookingInfo");
           navigate("/patient-portal?completed=true");
         }
@@ -530,7 +1047,6 @@ export default function Tracker() {
     return () => clearInterval(validationInterval);
   }, [appointmentData, navigate, API]);
 
-  /* ── Actions ──────────────────────────────────────────────── */
   const handleArrival = useCallback(async () => {
     const api = (import.meta as any).env.VITE_API_URL || "https://online-queue-project.onrender.com";
     const userStr = localStorage.getItem("user") || localStorage.getItem("currentUser");
@@ -579,64 +1095,16 @@ export default function Tracker() {
     navigate("/");
   }, [navigate]);
 
-  const parseTimeToMs = useCallback((t: string): number => {
-    if (!t) return 11 * 60 * 60000 + 55 * 60000;
-    const parts = t.trim().split(':');
-    if (parts.length < 2) return 11 * 60 * 60000 + 55 * 60000;
-    const [h, m] = parts.map(Number);
-    if (Number.isNaN(h) || Number.isNaN(m)) return 11 * 60 * 60000 + 55 * 60000;
-    return (h * 60 + m) * 60000;
-  }, []);
-  
-  const formatMs = useCallback((ms: number): string => {
-    if (Number.isNaN(ms) || ms < 0) ms = 11 * 60 * 60000 + 55 * 60000;
-    const totalMin = Math.floor(ms / 60000);
-    let h = Math.floor(totalMin / 60) % 24;
-    const m = totalMin % 60;
-    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-  }, []);
+  const isPremium = bookingInfo?.isPremium === true;
+  const tokensAhead = !isPremium && bookingInfo?.tokenNumber ? Math.max(0, bookingInfo.tokenNumber - currentServing) : 0;
 
-  /* ── Guard ────────────────────────────────────────────────── */
-  if (loading || !appointmentData) {
-    return (
-      <div className="min-h-screen bg-[#0A0F1E] flex flex-col items-center justify-center p-8 text-center font-sans">
-        <div className="relative">
-          <Loader2 size={48} className="text-emerald-400 animate-spin relative z-10" />
-        </div>
-        <p className="mt-6 text-emerald-400 text-[10px] font-black uppercase tracking-[0.2em] animate-pulse">
-          Synchronizing Live Clinical Session...
-        </p>
-      </div>
-    );
-  }
-
-  /* ── Derived values ───────────────────────────────────────── */
-  // Issue 6 Fix: Use ONLY isPremium boolean field — do NOT fall back to tier string
-  const isPremium = bookingInfo.isPremium === true;
-
-  const tokensAhead =
-    !isPremium && bookingInfo.tokenNumber
-      ? Math.max(0, bookingInfo.tokenNumber - currentServing)
-      : 0;
-
-  /* ── Appointment time calculation ─────────────────────────── */
-  const formatTime24Hour = (timeStr: string | undefined | null): string => {
-    if (!timeStr) return "Loading...";
-    const parts = timeStr.trim().split(":");
-    let h = Number(parts[0]);
-    let m = Number(parts[1]) || 0;
-    if (Number.isNaN(h) || Number.isNaN(m)) return "Loading...";
-    return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
-  };
-
-  const getAppointmentDateTime = () => {
+  const getAppointmentDateTime = useCallback(() => {
     let d = new Date();
     if (bookingInfo?.date) {
       const [year, month, day] = bookingInfo.date.split("-").map(Number);
       d = new Date(year, month - 1, day);
     }
-    
-    // Priority 1: Smart ETA from backend (if standard token)
+
     if (!isPremium && smartETA) {
       let [h, m] = smartETA.trim().split(":").map(Number);
       if (!Number.isNaN(h) && !Number.isNaN(m)) {
@@ -660,28 +1128,17 @@ export default function Tracker() {
       const { h, m } = resolveWalkInTime(clinicOpensAt, clinicDetails, tokensAhead);
       d.setHours(h, m, 0, 0);
 
-      // Dynamic shift: If the clinic opening time has passed, the true queue base is NOW
       const now = new Date();
       if (d.getTime() < now.getTime()) d = new Date(now.getTime());
 
       d.setMinutes(d.getMinutes() + (tokensAhead || 0) * 15);
     }
     return d;
-  };
+  }, [bookingInfo, isPremium, smartETA, clinicOpensAt, clinicDetails, tokensAhead]);
 
-  /* ── Phase calculation ─────────────────────────────────────── */
-  const apptTime = getAppointmentDateTime().getTime();
-  const diffMs = apptTime - currentTime.getTime();
-
-  const phase: Phase = isCanceled
-    ? "CANCELED"
-    : diffMs <= 0
-    ? "READY"
-    : diffMs < 60 * 60 * 1000
-    ? "LIVE"
-    : diffMs < 24 * 60 * 60 * 1000
-    ? "ACTIVE_DAY"
-    : "SCHEDULED";
+  const apptDateTime = useMemo(() => getAppointmentDateTime(), [getAppointmentDateTime]);
+  const diffMs = apptDateTime.getTime() - currentTime.getTime();
+  const phase: Phase = useMemo(() => calculatePhase(isCanceled, diffMs), [isCanceled, diffMs]);
 
   const absDiff = Math.max(0, diffMs);
   const countDays = Math.floor(absDiff / (1000 * 60 * 60 * 24));
@@ -698,69 +1155,49 @@ export default function Tracker() {
   };
   const pc = phaseConfig[phase];
 
-  /* ── Travel helpers ───────────────────────────────────────── */
-  const getCalculatedTime = (offsetMinus: number) => {
-    const d = getAppointmentDateTime();
-    d.setMinutes(d.getMinutes() - offsetMinus);
-    const localTodayStr = new Date().toLocaleDateString("en-CA");
-    if (bookingInfo?.date && bookingInfo.date !== localTodayStr) {
-      return d.toLocaleDateString("en-US", { weekday: "short" }) + " " + d.toLocaleTimeString('en-IN', { hour: "2-digit", minute: "2-digit", hour12: false });
-    }
-    return d.toLocaleTimeString('en-IN', { hour: "2-digit", minute: "2-digit", hour12: false });
-  };
+  const getCalculatedTime = useCallback(
+    (offsetMinus: number) => {
+      const d = getAppointmentDateTime();
+      d.setMinutes(d.getMinutes() - offsetMinus);
+      const localTodayStr = new Date().toLocaleDateString("en-CA");
+      if (bookingInfo?.date && bookingInfo.date !== localTodayStr) {
+        return (
+          d.toLocaleDateString("en-US", { weekday: "short" }) +
+          " " +
+          d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false })
+        );
+      }
+      return d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false });
+    },
+    [getAppointmentDateTime, bookingInfo?.date]
+  );
 
-  /* ── Issue 4: Check-in countdown ─────────────────────────── */
-  const checkInCountdownStr = (() => {
-    const checkInDiffMs = diffMs - 15 * 60 * 1000;
-    if (checkInDiffMs <= 0) return null;
-    const h = Math.floor(checkInDiffMs / (1000 * 60 * 60));
-    const m = Math.floor((checkInDiffMs % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, "0");
-    const s = Math.floor((checkInDiffMs % (1000 * 60)) / 1000).toString().padStart(2, "0");
-    return `${h > 0 ? h + "h " : ""}${m}m ${s}s`;
-  })();
+  const clinicOpensTimeStr = clinicOpensAt || clinicDetails?.startTime || "11:55";
 
-  const checkInWindowOpen = diffMs <= 15 * 60 * 1000;
-
-  const textColor = darkMode ? "text-white" : "text-[#2D3436]";
-  const subTextColor = darkMode ? "text-slate-400" : "text-[#636E72]";
-
-  const isWalkIn =
-    bookingInfo?.appointmentType === 'Direct Walk-in' ||
-    bookingInfo?.timeSlot === 'Direct Walk-in' ||
-    !bookingInfo?.timeSlot;
-
-  // Travel logistics: derive from APPOINTMENT time, not clinic opening (unless walk-in)
-  const apptDateTime = getAppointmentDateTime();
-  const apptMs = apptDateTime.getHours() * 3600000 + apptDateTime.getMinutes() * 60000;
-  const clinicOpensTimeStr = clinicOpensAt || clinicDetails?.startTime || '11:55';
-  const clinicOpenMs = parseTimeToMs(clinicOpensTimeStr);
-  
-  // Fluid Live Time Logic
   let leaveHomeDate = getAppointmentDateTime();
   leaveHomeDate.setMinutes(leaveHomeDate.getMinutes() - travelTime - safetyBuffer);
-  
+
   let leaveHomeTimeStr = getCalculatedTime(travelTime + safetyBuffer);
   let arrivalTimeStr = getCalculatedTime(safetyBuffer);
 
   if (bookingInfo?.date === new Date().toLocaleDateString("en-CA") || !bookingInfo?.date) {
-      if (leaveHomeDate.getTime() < currentTime.getTime() && currentTime.getTime() < getAppointmentDateTime().getTime()) {
-          leaveHomeTimeStr = "NOW";
-          const arriveDate = new Date(currentTime.getTime() + (travelTime * 60000) + (safetyBuffer * 60000));
-          arrivalTimeStr = arriveDate.toLocaleTimeString('en-IN', { hour: "2-digit", minute: "2-digit", hour12: false });
-      }
+    if (leaveHomeDate.getTime() < currentTime.getTime() && currentTime.getTime() < getAppointmentDateTime().getTime()) {
+      leaveHomeTimeStr = "NOW";
+      const arriveDate = new Date(currentTime.getTime() + travelTime * 60000 + safetyBuffer * 60000);
+      arrivalTimeStr = arriveDate.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false });
+    }
   }
 
   const leaveHomeTime = leaveHomeTimeStr;
-  const arrivalTime   = arrivalTimeStr;
+  const arrivalTime = arrivalTimeStr;
 
-  /* ── Opening-hours countdown for consolidated check-in button ── */
   const getAbsoluteClinicOpenTime = () => {
     let d = new Date();
     if (bookingInfo?.date) {
       const [year, month, day] = bookingInfo.date.split("-").map(Number);
       d = new Date(year, month - 1, day);
     }
-    const startStr = clinicOpensAt || clinicDetails?.startTime || '11:55';
+    const startStr = clinicOpensAt || clinicDetails?.startTime || "11:55";
     let [h, m] = startStr.trim().split(":").map(Number);
     if (Number.isNaN(h)) h = 11;
     if (Number.isNaN(m)) m = 55;
@@ -780,9 +1217,17 @@ export default function Tracker() {
     return h > 0 ? `${h}h ${m.toString().padStart(2, "0")}m ${s.toString().padStart(2, "0")}s` : `${m}m ${s.toString().padStart(2, "0")}s`;
   };
 
-  /* ═══════════════════════════════════════════════════════════
-     RENDER
-     ═══════════════════════════════════════════════════════════ */
+  if (loading || !appointmentData) {
+    return (
+      <div className="min-h-screen bg-[#0A0F1E] flex flex-col items-center justify-center p-8 text-center font-sans">
+        <Loader2 size={48} className="text-emerald-400 animate-spin relative z-10" />
+        <p className="mt-6 text-emerald-400 text-[10px] font-black uppercase tracking-[0.2em] animate-pulse">
+          Synchronizing Live Clinical Session...
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div
       className={`w-full min-h-screen transition-colors duration-500 font-sans ${
@@ -790,12 +1235,11 @@ export default function Tracker() {
       } selection:bg-emerald-500/30 overflow-x-hidden`}
     >
       <div className="relative max-w-lg mx-auto px-4 sm:px-8 py-4 sm:py-8 pb-32">
-        {/* OVERTIME REASSURANCE BANNER */}
         <AnimatePresence>
           {isOvertime && (
             <motion.div
               initial={{ opacity: 0, y: -20, height: 0 }}
-              animate={{ opacity: 1, y: 0, height: 'auto' }}
+              animate={{ opacity: 1, y: 0, height: "auto" }}
               exit={{ opacity: 0, y: -20, height: 0 }}
               className="mb-8 overflow-hidden"
             >
@@ -816,138 +1260,51 @@ export default function Tracker() {
           )}
         </AnimatePresence>
 
-        {/* ── Header ──────────────────────────────────────── */}
-        <header className="flex flex-col sm:flex-row justify-between items-center mb-12 gap-6 sm:gap-0">
-          <div className="flex items-center gap-6">
-            <button
-              onClick={() => { sessionStorage.removeItem("selectedPatient"); navigate("/patient-portal"); }}
-              className="p-3 rounded-2xl bg-emerald-500 text-white shadow-sm hover:scale-105 transition-all"
-              title="Back to Portal"
-            >
-              <ChevronLeft size={24} />
-            </button>
-            <div>
-              <h1 className={`text-2xl font-bold tracking-tight flex items-center gap-3 italic ${
-                darkMode ? "text-white" : "text-slate-900"
-              }`}>
-                Patient Tracker
-                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              </h1>
-              <p className={`font-bold uppercase text-[10px] tracking-[0.2em] mt-1 ${
-                darkMode ? "text-slate-400" : "text-slate-500"
-              }`}>
-                Physician: {clinicDetails?.doctorName || bookingInfo.doctorName || "Loading..."}
-              </p>
-            </div>
-          </div>
+        <TrackerHeader
+          clinicDetails={clinicDetails}
+          bookingInfo={bookingInfo}
+          darkMode={darkMode}
+          setDarkMode={setDarkMode}
+          navigate={navigate}
+          handleLogout={handleLogout}
+        />
 
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setDarkMode(!darkMode)}
-              className="p-3 rounded-2xl bg-emerald-500 text-white shadow-sm hover:scale-105 transition-all"
-              title="Toggle Theme"
-            >
-              {darkMode ? <Sun size={20} className="text-amber-300" /> : <Moon size={20} className="text-blue-200" />}
-            </button>
-            <button
-              onClick={handleLogout}
-              className="p-3 rounded-2xl bg-emerald-500 text-white shadow-sm hover:scale-105 transition-all"
-              title="Logout"
-            >
-              <LogOut size={18} />
-            </button>
-          </div>
-        </header>
+        <TrackerAccessTierBadge isPremium={isPremium} bookingInfo={bookingInfo} darkMode={darkMode} />
 
-        {/* ── Issue 4 & 5: Access Type Badge + Check-In + Travel Times ── */}
-        {/* ── Access Tier Badge ── */}
-        <div className="mb-8 animate-in fade-in slide-in-from-top duration-500">
-          {isPremium ? (
-            <div className={`p-6 rounded-[32px] border transition-all ${
-              darkMode ? "bg-gradient-to-br from-emerald-500/10 to-transparent border-emerald-500/20 text-emerald-300" : "bg-emerald-500/20 border-emerald-500/30 text-emerald-800"
-            }`}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
-                    darkMode ? "bg-emerald-500/10 text-emerald-400" : "bg-emerald-500/20 text-emerald-700"
-                  }`}>
-                    <Crown size={20} />
-                  </div>
-                  <div>
-                    <p className={`text-[10px] font-black uppercase tracking-widest ${
-                      darkMode ? "text-emerald-400" : "text-emerald-700"
-                    }`}>Premium Access</p>
-                    <p className={`text-sm font-bold mt-0.5 ${
-                      darkMode ? "text-slate-300" : "text-slate-800"
-                    }`}>
-                      Your Slot: {formatTime24Hour(bookingInfo.timeSlot || bookingInfo.time || "Scheduled")}
-                    </p>
-                  </div>
-                </div>
-                <span className={`text-[10px] font-black px-4 py-2 rounded-full border ${
-                  darkMode ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-emerald-500/20 border-emerald-500/30 text-emerald-700"
-                } uppercase tracking-widest`}>
-                  Elite Tier
-                </span>
-              </div>
-            </div>
-          ) : (
-            <div className={`p-6 rounded-[32px] border transition-all ${
-              darkMode ? "bg-gradient-to-br from-slate-500/10 to-transparent border-white/5 text-slate-300" : "bg-slate-300/80 border-slate-400/40 text-slate-700"
-            }`}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
-                    darkMode ? "bg-slate-500/10 text-slate-400" : "bg-slate-400/20 text-slate-600"
-                  }`}>
-                    <Users size={20} />
-                  </div>
-                  <div>
-                    <p className={`text-[10px] font-black uppercase tracking-widest ${
-                      darkMode ? "text-slate-400" : "text-slate-600"
-                    }`}>Standard Access</p>
-                    <p className={`text-sm font-bold mt-0.5 ${
-                      darkMode ? "text-white" : "text-slate-800"
-                    }`}>Token #{bookingInfo.tokenNumber}</p>
-                  </div>
-                </div>
-                <span className={`text-[10px] font-black px-4 py-2 rounded-full border ${
-                  darkMode ? "bg-slate-500/10 border-white/5 text-slate-400" : "bg-slate-400/20 border-slate-400/30 text-slate-600"
-                } uppercase tracking-widest`}>
-                  General
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Patient Profile */}
-        <div className={`mb-8 p-8 rounded-[32px] border transition-all shadow-sm ${
-          darkMode ? "bg-gradient-to-br from-white/5 to-transparent border-white/5 text-white" : "bg-white/40 border border-white/50 text-slate-800"
-        } animate-in fade-in slide-in-from-top duration-500 delay-100`}>
+        <div
+          className={`mb-8 p-8 rounded-[32px] border transition-all shadow-sm ${
+            darkMode
+              ? "bg-gradient-to-br from-white/5 to-transparent border-white/5 text-white"
+              : "bg-white/40 border border-white/50 text-slate-800"
+          } animate-in fade-in slide-in-from-top duration-500 delay-100`}
+        >
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Patient Profile</p>
-          <h2 className={`text-lg font-bold tracking-tight mt-1 ${
-            darkMode ? "text-white" : "text-slate-900"
-          }`}>
+          <h2 className={`text-lg font-bold tracking-tight mt-1 ${darkMode ? "text-white" : "text-slate-900"}`}>
             {bookingInfo.patientName || "Loading..."}
           </h2>
           <p className="text-[9px] font-bold text-slate-600 uppercase tracking-widest mt-2">
-            {currentTime.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} • {currentTime.toLocaleTimeString('en-IN', { hour: "2-digit", minute: "2-digit", hour12: false })}
+            {currentTime.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} •{" "}
+            {currentTime.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false })}
           </p>
         </div>
 
-        {/* Push Notification Promo */}
         {typeof window !== "undefined" && "Notification" in window && Notification.permission === "default" && (
-          <div className={`mb-8 p-6 rounded-[24px] border transition-all ${
-            darkMode ? "border-sky-500/30 bg-sky-500/10" : "border-sky-500/40 bg-sky-50"
-          } flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in fade-in zoom-in duration-500 delay-300`}>
+          <div
+            className={`mb-8 p-6 rounded-[24px] border transition-all ${
+              darkMode ? "border-sky-500/30 bg-sky-500/10" : "border-sky-500/40 bg-sky-50"
+            } flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in fade-in zoom-in duration-500 delay-300`}
+          >
             <div>
-              <h3 className={`text-sm font-black uppercase tracking-widest ${darkMode ? "text-sky-400" : "text-sky-700"}`}>Enable Alerts</h3>
-              <p className={`text-xs mt-1 font-semibold ${darkMode ? "text-sky-300" : "text-sky-600"}`}>Get notified when the doctor calls you, even if your phone is locked.</p>
+              <h3 className={`text-sm font-black uppercase tracking-widest ${darkMode ? "text-sky-400" : "text-sky-700"}`}>
+                Enable Alerts
+              </h3>
+              <p className={`text-xs mt-1 font-semibold ${darkMode ? "text-sky-300" : "text-sky-600"}`}>
+                Get notified when the doctor calls you, even if your phone is locked.
+              </p>
             </div>
             <button
               onClick={() => {
-                import('../push').then(m => m.subscribeToPushNotifications()).then(() => window.location.reload());
+                import("../push").then((m) => m.subscribeToPushNotifications()).then(() => window.location.reload());
               }}
               className="px-5 py-3 w-full sm:w-auto bg-sky-500 hover:bg-sky-400 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-sky-500/20 active:scale-95 shrink-0"
             >
@@ -956,7 +1313,6 @@ export default function Tracker() {
           </div>
         )}
 
-        {/* ── Notification Overlay ────────────────────────── */}
         <AnimatePresence>
           {notification && (
             <motion.div
@@ -985,109 +1341,21 @@ export default function Tracker() {
         </AnimatePresence>
 
         <section className="space-y-8 animate-in fade-in slide-in-from-bottom duration-700">
-          {/* ═══════════════════════════════════════════════
-              HERO: Time-Aware Countdown Card
-              ═══════════════════════════════════════════════ */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={`rounded-[48px] border transition-all p-10 shadow-sm relative overflow-hidden ${
-              darkMode ? "bg-gradient-to-br " + pc.bg + " " + pc.border : "bg-slate-300/90 border border-white/35"
-            }`}
-          >
-            {/* Phase badge */}
-            <div className="flex items-center gap-3 mb-6">
-              <div className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.2em] leading-none border ${
-                darkMode ? "text-emerald-400 bg-white/5 border-white/10" : "text-slate-700 bg-white/40 border border-white/50"
-              }`}>
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 mr-2 animate-pulse" />
-                {pc.label}
-              </div>
-              <div className={`px-3 py-1.5 rounded-full border text-[9px] font-black uppercase tracking-[0.2em] leading-none ${
-                darkMode ? "bg-white/5 border-white/10 text-slate-500" : "bg-white/40 border border-white/50 text-slate-600"
-              }`}>
-                {isPremium ? "Elite" : "General"}
-              </div>
-            </div>
+          <TrackerCountdownHero
+            phase={phase}
+            pc={pc}
+            darkMode={darkMode}
+            telemetryError={telemetryError}
+            handleRebook={handleRebook}
+            countDays={countDays}
+            countHours={countHours}
+            countMinutes={countMinutes}
+            countSeconds={countSeconds}
+            bookingInfo={bookingInfo}
+            clinicDetails={clinicDetails}
+            isPremium={isPremium}
+          />
 
-            {telemetryError && (
-              <div className={`mb-6 p-4 rounded-2xl border text-xs font-bold flex items-center gap-2 animate-pulse ${
-                darkMode ? "bg-rose-500/10 border-rose-500/20 text-rose-400" : "bg-rose-500/10 border-rose-500/20 text-rose-600"
-              }`}>
-                <AlertTriangle size={16} />
-                <span>{telemetryError}</span>
-              </div>
-            )}
-
-            {phase === "CANCELED" ? (
-              <div className="text-center py-6">
-                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full mb-4 border bg-rose-500/20 border-rose-500/30">
-                  <AlertTriangle size={36} className="text-rose-600" />
-                </div>
-                <h2 className="text-3xl font-black text-rose-700 tracking-tight mb-2">Booking Canceled</h2>
-                <p className="text-sm text-slate-600 mb-6 font-semibold uppercase tracking-wider">This appointment has been canceled. You can rebook below.</p>
-                <button onClick={handleRebook} className="px-8 py-4 rounded-2xl bg-rose-600 text-white font-black text-sm uppercase tracking-widest hover:bg-rose-500 transition-all shadow-lg shadow-rose-500/20">
-                  Rebook Now
-                </button>
-              </div>
-            ) : phase === "SCHEDULED" ? (
-              <div className="space-y-2">
-                <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Appointment In</p>
-                <div className={`text-5xl sm:text-6xl font-black italic tracking-tighter leading-none ${
-                  darkMode ? pc.accent : "text-white"
-                }`} style={{ fontVariantNumeric: "tabular-nums" }}>
-                  {countDays}d {countHours}h
-                </div>
-                <div className="flex items-center gap-2 mt-4">
-                  <CalendarClock size={14} className={darkMode ? pc.accent : "text-slate-600"} />
-                  <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">
-                    {bookingInfo.date} at {bookingInfo.time || formatTime24Hour(clinicDetails?.startTime)}
-                  </p>
-                </div>
-              </div>
-            ) : phase === "ACTIVE_DAY" ? (
-              <div className="space-y-2">
-                <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Prepare — Arriving In</p>
-                <div className={`text-5xl sm:text-6xl font-black italic tracking-tighter leading-none ${
-                  darkMode ? pc.accent : "text-white"
-                }`} style={{ fontVariantNumeric: "tabular-nums" }}>
-                  {countHours}h {countMinutes.toString().padStart(2, "0")}m
-                </div>
-                <div className="flex items-center gap-2 mt-4">
-                  <Clock size={14} className={darkMode ? pc.accent : "text-slate-600"} />
-                  <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">
-                    Time to depart in {Math.max(0, countHours * 60 + countMinutes - 30)} min
-                  </p>
-                </div>
-              </div>
-            ) : phase === "LIVE" ? (
-              <div className="space-y-2">
-                <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Time to Arrive</p>
-                <div className={`text-5xl sm:text-7xl font-black italic tracking-tighter leading-none ${
-                  darkMode ? pc.accent : "text-white"
-                }`} style={{ fontVariantNumeric: "tabular-nums" }}>
-                  {countMinutes.toString().padStart(2, "0")}:{countSeconds.toString().padStart(2, "0")}
-                </div>
-                <div className="flex items-center gap-2 mt-4">
-                  <Activity size={14} className="text-emerald-600 animate-pulse" />
-                  <p className="text-emerald-700 text-[10px] font-bold uppercase tracking-widest">Live Countdown Active</p>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Status</p>
-                <h2 className={`text-4xl sm:text-5xl font-black italic tracking-tighter leading-none ${
-                  darkMode ? "text-emerald-400" : "text-white"
-                }`}>READY</h2>
-                <div className="flex items-center gap-2 mt-4">
-                  <Sparkles size={14} className="text-emerald-600 animate-pulse" />
-                  <p className="text-emerald-700 text-[10px] font-bold uppercase tracking-widest">Your Session is Ready</p>
-                </div>
-              </div>
-            )}
-          </motion.div>
-
-          {/* Mandatory Protocol notice */}
           {!isArrived && phase !== "CANCELED" && (
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
@@ -1097,188 +1365,58 @@ export default function Tracker() {
               }`}
             >
               <div className="relative z-10 flex items-start gap-4">
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
-                  darkMode ? "bg-sky-500/10 text-sky-400" : "bg-slate-400/20 text-slate-600"
-                }`}>
+                <div
+                  className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
+                    darkMode ? "bg-sky-500/10 text-sky-400" : "bg-slate-400/20 text-slate-600"
+                  }`}
+                >
                   <Zap size={24} className="fill-current animate-pulse text-amber-500" />
                 </div>
                 <div className="space-y-1">
                   <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-600">Mandatory Protocol</h4>
                   <p className="text-xs font-bold leading-relaxed text-slate-500 uppercase tracking-wider">
                     Upon reaching the clinic facility, you MUST click the{" "}
-                    <span className={`underline font-black ${darkMode ? "text-white" : "text-slate-800"}`}>"CLINIC CHECK-IN"</span> button to verify your arrival.
+                    <span className={`underline font-black ${darkMode ? "text-white" : "text-slate-800"}`}>
+                      "CLINIC CHECK-IN"
+                    </span>{" "}
+                    button to verify your arrival.
                   </p>
                 </div>
               </div>
             </motion.div>
           )}
 
-          {/* ── Travel & Logistics Protocol (Theme Consistent & Subtle Sizing) ── */}
           {phase !== "CANCELED" && (
-            <div className="mt-8 space-y-4">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 px-2">
-                Travel & Logistics Protocol
-              </p>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Clinic Opens */}
-                <div className={`p-6 rounded-[32px] border transition-all ${
-                  darkMode ? "bg-gradient-to-br from-white/5 to-transparent border-white/5" : "bg-white/40 border border-white/50"
-                }`}>
-                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Clinic Opens</p>
-                  <p className={`text-2xl font-black mt-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>{clinicOpensTimeStr}</p>
-                  <p className="text-[10px] text-slate-400 mt-2 uppercase font-semibold">Doctor's hours start</p>
-                </div>
-
-                {/* Your Appointment / Est. Turn Time */}
-                <div className={`p-6 rounded-[32px] border transition-all ${
-                  darkMode ? "bg-gradient-to-br from-white/5 to-transparent border-white/5" : "bg-white/40 border border-white/50"
-                }`}>
-                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">{isPremium ? "Your Appointment" : "Est. Turn Time"}</p>
-                  <p className={`text-2xl font-black mt-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>{isPremium ? formatTime24Hour(bookingInfo.timeSlot || bookingInfo.time || "13:30") : getAppointmentDateTime().toLocaleTimeString('en-IN', { hour: "2-digit", minute: "2-digit", hour12: false })}</p>
-                  <p className="text-[10px] text-slate-400 mt-2 uppercase font-semibold">{isPremium ? "Your scheduled slot" : "Based on live queue"}</p>
-                </div>
-
-                {/* Leave Home */}
-                <div className={`p-6 rounded-[32px] border transition-all flex flex-col justify-between ${
-                  darkMode ? "bg-gradient-to-br from-white/5 to-transparent border-white/5" : "bg-white/40 border border-white/50"
-                }`}>
-                  <div>
-                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Leave Home</p>
-                    <p className={`text-2xl font-black mt-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>{leaveHomeTime}</p>
-                  </div>
-                  <div className={`border-t pt-3 mt-3 ${darkMode ? 'border-white/5' : 'border-slate-200'}`}>
-                    <p className="text-[8px] font-black uppercase tracking-widest text-slate-500">Est. Travel</p>
-                    <p className="text-sm font-black text-emerald-400">{travelTime} mins</p>
-                  </div>
-                </div>
-
-                {/* Arrive At */}
-                <div className={`p-6 rounded-[32px] border transition-all flex flex-col justify-between ${
-                  darkMode ? "bg-gradient-to-br from-white/5 to-transparent border-white/5" : "bg-white/40 border border-white/50"
-                }`}>
-                  <div>
-                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Arrive At</p>
-                    <p className={`text-2xl font-black mt-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>{arrivalTime}</p>
-                  </div>
-                  <div className={`border-t pt-3 mt-3 ${darkMode ? 'border-white/5' : 'border-slate-200'}`}>
-                    <p className="text-[8px] font-black uppercase tracking-widest text-slate-500">Safety Buffer</p>
-                    <p className="text-sm font-black text-emerald-400">{safetyBuffer} mins</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <TrackerTravelProtocol
+              darkMode={darkMode}
+              clinicOpensTimeStr={clinicOpensTimeStr}
+              isPremium={isPremium}
+              bookingInfo={bookingInfo}
+              appointmentDateTime={apptDateTime}
+              leaveHomeTime={leaveHomeTime}
+              travelTime={travelTime}
+              arrivalTime={arrivalTime}
+              safetyBuffer={safetyBuffer}
+            />
           )}
 
-          {/* ── Detail Section ── */}
           {phase !== "CANCELED" && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className={`rounded-[48px] border overflow-hidden transition-all shadow-sm ${
-                darkMode ? "bg-gradient-to-br from-white/5 via-transparent to-transparent border-white/5" : "bg-white/40 border border-white/50"
-              }`}
-            >
-              <button
-                onClick={() => setDetailsExpanded(!detailsExpanded)}
-                className={`w-full flex items-center justify-between p-6 transition-colors ${
-                  darkMode ? "hover:bg-white/5" : "hover:bg-white/30"
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-slate-400/20 flex items-center justify-center text-slate-600">
-                    <Stethoscope size={16} />
-                  </div>
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Appointment Details</span>
-                </div>
-                {detailsExpanded ? <ChevronUp size={16} className="text-slate-500" /> : <ChevronDown size={16} className="text-slate-500" />}
-              </button>
-
-              <AnimatePresence>
-                {detailsExpanded && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="px-6 pb-6 space-y-5">
-                      <div className="flex items-start gap-3">
-                        <User className="w-5 h-5 mt-0.5 shrink-0 text-slate-600" />
-                        <div>
-                          <p className="text-xs font-black uppercase text-slate-500 tracking-wider">Patient Name</p>
-                          <p className={`font-bold ${darkMode ? "text-slate-200" : "text-slate-800"}`}>{bookingInfo.patientName || "Guest"}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <Clock className="w-5 h-5 mt-0.5 shrink-0 text-slate-600" />
-                        <div>
-                          <p className="text-xs font-black uppercase text-slate-500 tracking-wider">Clinical Date</p>
-                          <p className={`font-bold ${darkMode ? "text-slate-200" : "text-slate-800"}`}>{bookingInfo.date}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <Stethoscope className="w-5 h-5 mt-0.5 shrink-0 text-slate-600" />
-                        <div>
-                          <p className="text-xs font-black uppercase text-slate-500 tracking-wider">Doctor / Speciality</p>
-                          <p className={`font-bold ${darkMode ? "text-slate-200" : "text-slate-800"}`}>
-                            {clinicDetails?.doctorName || bookingInfo.doctorName || "Loading..."} (
-                            {clinicDetails?.speciality || bookingInfo.specialty || "General Medicine"})
-                          </p>
-                        </div>
-                      </div>
-                      {bookingInfo.tokenNumber && (
-                        <div className="flex items-start gap-3">
-                          <Ticket className="w-5 h-5 mt-0.5 shrink-0 text-slate-600" />
-                          <div>
-                            <p className="text-xs font-black uppercase text-slate-500 tracking-wider">Token Number</p>
-                            <p className={`font-black text-lg ${darkMode ? "text-slate-200" : "text-slate-800"}`}>
-                              #{bookingInfo.tokenNumber}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                      {clinicDetails && (
-                        <>
-                          <div className="border-t border-slate-300/80 pt-5 space-y-4">
-                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">Clinic Infrastructure</span>
-                            <div className="flex items-start gap-3">
-                              <MapPin className="w-5 h-5 mt-0.5 shrink-0 text-slate-600" />
-                              <div>
-                                <p className="text-xs font-black uppercase text-slate-500 tracking-wider">Address</p>
-                                <p className={`font-bold text-sm ${darkMode ? "text-slate-200" : "text-slate-800"}`}>{clinicDetails.clinicAddress}</p>
-                              </div>
-                            </div>
-                            <div className="flex items-start gap-3">
-                              <Pill className="w-5 h-5 mt-0.5 shrink-0 text-slate-600" />
-                              <div>
-                                <p className="text-xs font-black uppercase text-slate-500 tracking-wider">On-site Pharmacy</p>
-                                <p className={`font-bold ${darkMode ? "text-slate-200" : "text-slate-800"}`}>{clinicDetails.pharmacy}</p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-3 text-sm">
-                              <span style={{ fontSize: 18 }}>♿</span>
-                              <span className={`font-bold ${darkMode ? "text-slate-200" : "text-slate-800"}`}>
-                                Wheelchair: {clinicDetails.wheelchairAccess ? "✓ Accessible" : "Not Available"}
-                              </span>
-                            </div>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
+            <TrackerAppointmentDetails
+              detailsExpanded={detailsExpanded}
+              setDetailsExpanded={setDetailsExpanded}
+              darkMode={darkMode}
+              bookingInfo={bookingInfo}
+              clinicDetails={clinicDetails}
+            />
           )}
 
-          {/* ── Real-time Queue Info (Standard) ──────────── */}
           {phase !== "CANCELED" && !isPremium && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className={`p-6 rounded-[32px] border transition-all ${
-                darkMode ? "bg-gradient-to-br from-white/5 to-transparent border-white/5" : "bg-slate-300/90 border border-white/30"
-              }`}>
+              <div
+                className={`p-6 rounded-[32px] border transition-all ${
+                  darkMode ? "bg-gradient-to-br from-white/5 to-transparent border-white/5" : "bg-slate-300/90 border border-white/30"
+                }`}
+              >
                 <div className="flex items-center gap-2 mb-3 text-slate-600">
                   <Ticket size={14} />
                   <span className="text-[9px] font-black uppercase tracking-widest">Queue Position</span>
@@ -1289,45 +1427,69 @@ export default function Tracker() {
                 <p className="text-[9px] text-slate-600 font-black uppercase tracking-widest mt-2">Token Sequential</p>
               </div>
 
-              <div className={`p-6 rounded-[32px] border transition-all ${
-                darkMode ? "bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/20" : "bg-emerald-500/20 border-emerald-500/30 text-emerald-800"
-              }`}>
+              <div
+                className={`p-6 rounded-[32px] border transition-all ${
+                  darkMode
+                    ? "bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/20"
+                    : "bg-emerald-500/20 border-emerald-500/30 text-emerald-800"
+                }`}
+              >
                 <div className="flex items-center gap-2 mb-3 text-emerald-700">
                   <Clock size={14} />
                   <span className="text-[9px] font-black uppercase tracking-widest">Clinic Opens</span>
                 </div>
-                <h4 className={`text-3xl font-black italic tracking-tighter ${darkMode ? "text-emerald-400" : "text-white"}`} style={{ fontVariantNumeric: "tabular-nums" }}>
+                <h4
+                  className={`text-3xl font-black italic tracking-tighter ${darkMode ? "text-emerald-400" : "text-white"}`}
+                  style={{ fontVariantNumeric: "tabular-nums" }}
+                >
                   {clinicOpensAt || formatTime24Hour(clinicDetails?.startTime)}
                 </h4>
               </div>
             </div>
           )}
 
-          {/* Premium: time slot display */}
           {phase !== "CANCELED" && isPremium && (
-            <div className={`p-10 rounded-[48px] border transition-all flex flex-col items-center justify-center text-center space-y-4 ${
-              darkMode ? "bg-gradient-to-br from-emerald-500/10 to-transparent border-emerald-500/20" : "bg-emerald-500/20 border-emerald-500/30 text-emerald-800"
-            }`}>
+            <div
+              className={`p-10 rounded-[48px] border transition-all flex flex-col items-center justify-center text-center space-y-4 ${
+                darkMode
+                  ? "bg-gradient-to-br from-emerald-500/10 to-transparent border-emerald-500/20"
+                  : "bg-emerald-500/20 border-emerald-500/30 text-emerald-800"
+              }`}
+            >
               <Crown size={32} className="text-emerald-700" />
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.4em] text-emerald-700 mb-2">Exclusive Priority Slot</p>
-                <h4 className={`text-4xl sm:text-6xl font-black italic tracking-tighter ${darkMode ? "text-emerald-400" : "text-white"}`}>
+                <p className="text-[10px] font-black uppercase tracking-[0.4em] text-emerald-700 mb-2">
+                  Exclusive Priority Slot
+                </p>
+                <h4
+                  className={`text-4xl sm:text-6xl font-black italic tracking-tighter ${
+                    darkMode ? "text-emerald-400" : "text-white"
+                  }`}
+                >
                   {bookingInfo.timeSlot || bookingInfo.time || formatTime24Hour(clinicDetails?.startTime)}
                 </h4>
               </div>
-              <p className="text-[9px] font-bold text-emerald-700 uppercase tracking-widest">Medical entry prioritized at configured time.</p>
+              <p className="text-[9px] font-bold text-emerald-700 uppercase tracking-widest">
+                Medical entry prioritized at configured time.
+              </p>
             </div>
           )}
 
-          {/* Queue Progress (Standard) */}
           {!isPremium && tokensAhead > 0 && phase !== "CANCELED" && (
-            <div className={`p-8 rounded-[48px] border transition-all relative overflow-hidden ${
-              darkMode ? "bg-gradient-to-br from-sky-500/10 to-transparent border-sky-500/15" : "bg-slate-300/90 border border-white/30"
-            }`}>
+            <div
+              className={`p-8 rounded-[48px] border transition-all relative overflow-hidden ${
+                darkMode ? "bg-gradient-to-br from-sky-500/10 to-transparent border-sky-500/15" : "bg-slate-300/90 border border-white/30"
+              }`}
+            >
               <div className="flex justify-between items-end mb-6">
                 <div>
-                  <h5 className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] mb-2 leading-none">Estimated Wait</h5>
-                  <p className={`text-4xl font-black italic tracking-tighter ${darkMode ? "text-sky-400" : "text-white"}`} style={{ fontVariantNumeric: "tabular-nums" }}>
+                  <h5 className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] mb-2 leading-none">
+                    Estimated Wait
+                  </h5>
+                  <p
+                    className={`text-4xl font-black italic tracking-tighter ${darkMode ? "text-sky-400" : "text-white"}`}
+                    style={{ fontVariantNumeric: "tabular-nums" }}
+                  >
                     {tokensAhead * 15} MIN
                   </p>
                 </div>
@@ -1336,9 +1498,7 @@ export default function Tracker() {
                 </div>
               </div>
               <div className="space-y-4">
-                <div className={`h-1.5 w-full rounded-full overflow-hidden ${
-                  darkMode ? "bg-white/5" : "bg-slate-400/30"
-                }`}>
+                <div className={`h-1.5 w-full rounded-full overflow-hidden ${darkMode ? "bg-white/5" : "bg-slate-400/30"}`}>
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${(currentServing / (bookingInfo.tokenNumber || 1)) * 100}%` }}
@@ -1355,10 +1515,11 @@ export default function Tracker() {
             </div>
           )}
 
-          {/* HIPAA Bar */}
-          <div className={`p-6 rounded-[32px] border transition-all flex items-center justify-center gap-3 ${
-            darkMode ? "bg-gradient-to-br from-white/5 to-transparent border-white/5" : "bg-slate-300/80 border border-white/30"
-          }`}>
+          <div
+            className={`p-6 rounded-[32px] border transition-all flex items-center justify-center gap-3 ${
+              darkMode ? "bg-gradient-to-br from-white/5 to-transparent border-white/5" : "bg-slate-300/80 border border-white/30"
+            }`}
+          >
             <ShieldAlert size={14} className="text-slate-500" />
             <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
               System-wide data encryption active • HIPAA Compliant
@@ -1368,73 +1529,28 @@ export default function Tracker() {
           <button
             onClick={() => navigate("/patient-portal")}
             className={`w-full py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
-              darkMode ? "bg-white/5 hover:bg-white/10 border-white/5 text-slate-400" : "bg-white/40 hover:bg-white/60 border border-white/50 text-slate-600"
+              darkMode
+                ? "bg-white/5 hover:bg-white/10 border-white/5 text-slate-400"
+                : "bg-white/40 hover:bg-white/60 border border-white/50 text-slate-600"
             }`}
           >
             ← Return to Patient Portal
           </button>
-          {/* Spacer to prevent overlap with fixed check-in bar */}
-          <div style={{ height: '140px' }} />
+          <div style={{ height: "140px" }} />
         </section>
 
-        {/* ═══════════════════════════════════════════════
-            FLOATING CHECK-IN CONTROL (Consolidated for all users)
-            ═══════════════════════════════════════════════ */}
         {phase !== "CANCELED" && (
-          <div className={`fixed bottom-0 left-0 right-0 p-6 pt-20 pointer-events-none z-40 bg-gradient-to-t ${
-            darkMode ? "from-[#0A0F1E] via-[#0A0F1E]/90" : "from-[#cbd5e1] via-[#cbd5e1]/95"
-          } to-transparent`}>
-            <div className="max-w-md mx-auto pointer-events-auto">
-              {isBeforeOpening ? (
-                /* Locked — countdown to opening hours */
-                <div className={`w-full h-24 rounded-[40px] border flex flex-col items-center justify-center gap-1 cursor-not-allowed shadow-sm ${
-                  darkMode ? "bg-gradient-to-br from-white/5 to-transparent border-white/5" : "bg-white/40 border border-white/50"
-                }`}>
-                  <div className="flex items-center gap-3 text-slate-600">
-                    <Clock className="w-6 h-6 animate-pulse text-blue-600" />
-                    <span className={`text-2xl font-black tracking-tighter uppercase italic ${darkMode ? "text-blue-400" : "text-slate-700"}`} style={{ fontVariantNumeric: "tabular-nums" }}>
-                      OPENS IN {getOpeningCountdownStr()}
-                    </span>
-                  </div>
-                  <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest leading-none mt-1">
-                    Clinic Opening Time: {clinicOpensTimeStr}
-                  </span>
-                </div>
-              ) : !isArrived ? (
-                /* Active check-in button */
-                <button
-                  onClick={handleArrival}
-                  className="group relative w-full h-24 overflow-hidden rounded-[40px] bg-emerald-500 active:scale-95 transition-all duration-300 shadow-lg shadow-emerald-500/20"
-                >
-                  <div className="absolute inset-0 bg-emerald-400 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
-                  <div className="relative flex flex-col items-center justify-center gap-1">
-                    <div className="flex items-center gap-3 text-white transition-colors">
-                      <MapPin className="w-8 h-8 animate-bounce fill-current" />
-                      <span className="text-2xl font-black tracking-tighter uppercase italic">CLINIC CHECK-IN</span>
-                    </div>
-                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-100 group-hover:text-white transition-colors">
-                      Tactical Deployment Phase — Open
-                    </span>
-                  </div>
-                </button>
-              ) : (
-                /* Verified state */
-                <div className={`w-full h-24 rounded-[40px] border flex flex-col items-center justify-center gap-1 ${
-                  darkMode ? "bg-gradient-to-br from-emerald-500/10 to-transparent border-emerald-500/20" : "bg-emerald-500/20 border-emerald-500/30 text-emerald-800"
-                }`}>
-                  <div className="flex items-center gap-2 text-emerald-700">
-                    <Sparkles size={24} className="fill-current animate-pulse animate-spin" />
-                    <span className="text-xl font-black uppercase tracking-tighter">Check-in Verified</span>
-                  </div>
-                  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">Wait for specialized directive</span>
-                </div>
-              )}
-            </div>
-          </div>
+          <TrackerFloatingCheckIn
+            isBeforeOpening={isBeforeOpening}
+            isArrived={isArrived}
+            handleArrival={handleArrival}
+            darkMode={darkMode}
+            clinicOpensTimeStr={clinicOpensTimeStr}
+            getOpeningCountdownStr={getOpeningCountdownStr}
+          />
         )}
       </div>
 
-      {/* Ringing Overlay */}
       <AnimatePresence>
         {isRinging && (
           <motion.div

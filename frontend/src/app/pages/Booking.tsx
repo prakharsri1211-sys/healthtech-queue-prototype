@@ -486,7 +486,6 @@ export default function Booking() {
       } finally {
         setSyncing(false);
       }
-    }
   };
 
   const subTextColor = "text-slate-600";
