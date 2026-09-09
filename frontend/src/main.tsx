@@ -3,38 +3,37 @@
   import "./styles/index.css";
 
   const originalFetch = window.fetch;
+
+  // Extracted to keep the fetch interceptor CC ≤ 15
+  const injectAuthToken = (input: RequestInfo | URL, init?: RequestInit): { input: RequestInfo | URL; init: RequestInit } | null => {
+      let url: RequestInfo | URL = input;
+      if (input instanceof Request) url = input.url;
+
+      const urlStr = typeof url === 'string' ? url : url.toString();
+      const isApiRequest = urlStr.includes('/api/') || urlStr.startsWith('/api/');
+      const isAuthRequest = urlStr.includes('/api/auth/');
+      if (!isApiRequest || isAuthRequest) return null;
+
+      const userStr = localStorage.getItem('currentUser') || localStorage.getItem('user');
+      if (!userStr) return null;
+
+      try {
+          const user = JSON.parse(userStr);
+          if (!user.token) return null;
+          const newInit = { ...(init || {}), headers: { ...(init?.headers || {}), 'Authorization': `Bearer ${user.token}` } };
+          return { input, init: newInit };
+      } catch (e) {
+          console.error('Error parsing user token', e);
+          return null;
+      }
+  };
+
   window.fetch = async (input, init) => {
-      let url = input;
-      if (input instanceof Request) {
-          url = input.url;
+      const injected = injectAuthToken(input, init);
+      if (injected) {
+          if (input instanceof Request) return originalFetch(new Request(input, injected.init));
+          return originalFetch(injected.input, injected.init);
       }
-      
-      const isApiRequest = typeof url === 'string' && (url.includes('/api/') || url.startsWith('/api/'));
-      const isAuthRequest = typeof url === 'string' && url.includes('/api/auth/');
-      
-      if (isApiRequest && !isAuthRequest) {
-          const userStr = localStorage.getItem('currentUser') || localStorage.getItem('user');
-          if (userStr) {
-              try {
-                  const user = JSON.parse(userStr);
-                  if (user.token) {
-                      const newInit = { ...(init || {}) };
-                      newInit.headers = {
-                          ...(newInit.headers || {}),
-                          'Authorization': `Bearer ${user.token}`
-                      };
-                      if (input instanceof Request) {
-                          const newReq = new Request(input, newInit);
-                          return originalFetch(newReq);
-                      }
-                      return originalFetch(input, newInit);
-                  }
-              } catch (e) {
-                  console.error('Error parsing user token', e);
-              }
-          }
-      }
-      
       return originalFetch(input, init);
   };
 

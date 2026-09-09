@@ -22,6 +22,42 @@ const validateSignUpForm = (formData: any, role: string, isVerified: boolean) =>
     return null;
 };
 
+// ── Helpers extracted to keep handleSignUp CC ≤ 15 ─────────────────────────────
+
+const buildDoctorFields = (formData: any): Record<string, string | boolean> => {
+    const fields: Record<string, string | boolean> = {};
+    if (formData.speciality.trim()) fields.speciality = formData.speciality.trim();
+    if (formData.clinicName.trim()) fields.clinicName = formData.clinicName.trim();
+    if (formData.clinicAddress.trim()) fields.clinicAddress = formData.clinicAddress.trim();
+    if (formData.latitude) fields.latitude = formData.latitude;
+    if (formData.longitude) fields.longitude = formData.longitude;
+    return fields;
+};
+
+const performAutoLogin = async (apiBase: string, username: string, password: string): Promise<any | null> => {
+    try {
+        const loginRes = await fetch(`${apiBase}/api/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+        if (loginRes.ok) return await loginRes.json();
+    } catch (_) { /* login failure is non-fatal */ }
+    return null;
+};
+
+const getNavigationTarget = (role: string): string => {
+    if (role === "doctor") return "/doctor-onboarding";
+    if (role === "mediator") return "/clinic-confirmation";
+    return "/patient-portal";
+};
+
+const getApiRole = (role: string): string => {
+    if (role === "doctor") return "ROLE_DOCTOR";
+    if (role === "mediator") return "ROLE_MEDIATOR";
+    return "ROLE_PATIENT";
+};
+
 export default function SignUpPage(): React.JSX.Element {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
@@ -78,7 +114,7 @@ export default function SignUpPage(): React.JSX.Element {
         e.preventDefault();
         setError("");
         setIsLoading(true);
-        
+
         const validationError = validateSignUpForm(formData, role, isVerified);
         if (validationError) {
             setError(validationError);
@@ -86,8 +122,7 @@ export default function SignUpPage(): React.JSX.Element {
             return;
         }
 
-        const apiRole = role === "doctor" ? "ROLE_DOCTOR" : role === "mediator" ? "ROLE_MEDIATOR" : "ROLE_PATIENT";
-
+        const apiRole = getApiRole(role);
         const signupData: Record<string, string | boolean> = {
             username: formData.username,
             password: formData.password,
@@ -99,67 +134,31 @@ export default function SignUpPage(): React.JSX.Element {
             identityToken: formData.identityToken,
             gender: formData.gender || ""
         };
-
-        if (role === "doctor") {
-            if (formData.speciality.trim()) signupData.speciality = formData.speciality.trim();
-            if (formData.clinicName.trim()) signupData.clinicName = formData.clinicName.trim();
-            if (formData.clinicAddress.trim()) signupData.clinicAddress = formData.clinicAddress.trim();
-            if (formData.latitude) signupData.latitude = formData.latitude;
-            if (formData.longitude) signupData.longitude = formData.longitude;
-        }
+        if (role === "doctor") Object.assign(signupData, buildDoctorFields(formData));
 
         try {
-            // Priority: use relative path to allow Nginx/Vite proxy to handle routing correctly in Docker/Local
             const apiBase = (import.meta as any).env.VITE_API_URL || "https://online-queue-project.onrender.com";
-            const signupUrl = `${apiBase}/api/auth/signup`;
-            
-            console.log(`[Clinical Node] Initiating registration at: ${signupUrl}`);
-            
-            const response = await fetch(signupUrl, {
+            console.log(`[Clinical Node] Initiating registration at: ${apiBase}/api/auth/signup`);
+
+            const response = await fetch(`${apiBase}/api/auth/signup`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(signupData)
             });
 
             if (response.ok) {
-                const loginRes = await fetch(`${apiBase}/api/auth/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username: formData.username, password: formData.password })
-                });
-
-                let userToSave: any = {
-                    username: signupData.username,
-                    role: apiRole,
-                    fullName: signupData.fullName,
-                    primaryAadharNumber: signupData.primaryAadharNumber,
-                    age: signupData.age
-                };
-
-                if (loginRes.ok) {
-                     const userData = await loginRes.json();
-                     userToSave = { 
-                        ...userData, 
-                        name: userData.fullName || userData.username,
-                        primaryAadharNumber: userData.primaryAadharNumber || signupData.primaryAadharNumber,
-                        age: userData.age || signupData.age
-                     };
-                }
+                const loginData = await performAutoLogin(apiBase, formData.username, formData.password);
+                const userToSave = loginData
+                    ? { ...loginData, name: loginData.fullName || loginData.username, primaryAadharNumber: loginData.primaryAadharNumber || signupData.primaryAadharNumber, age: loginData.age || signupData.age }
+                    : { username: signupData.username, role: apiRole, fullName: signupData.fullName, primaryAadharNumber: signupData.primaryAadharNumber, age: signupData.age };
 
                 if (role === "patient") {
-                    sessionStorage.setItem("accountData", JSON.stringify({
-                        id: userToSave.id || userToSave.username, 
-                        username: userToSave.username,
-                        patients: []
-                    }));
+                    sessionStorage.setItem("accountData", JSON.stringify({ id: userToSave.id || userToSave.username, username: userToSave.username, patients: [] }));
                 }
-                
                 localStorage.setItem("user", JSON.stringify(userToSave));
                 localStorage.setItem("currentUser", JSON.stringify(userToSave));
                 sessionStorage.setItem("currentUser", JSON.stringify(userToSave));
-
-                const target = role === "doctor" ? "/doctor-onboarding" : role === "mediator" ? "/clinic-confirmation" : "/patient-portal";
-                navigate(target);
+                navigate(getNavigationTarget(role));
             } else {
                 const data = await response.json();
                 setError(data.error || "Signup failed. Please try again.");

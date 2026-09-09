@@ -115,6 +115,77 @@ const playNotificationSound = (type: "bell" | "beep" | "call") => {
   }
 };
 
+// ── Helpers extracted to reduce Tracker CC ────────────────────────────────────
+
+const sendNativeNotification = (title: string, body: string) => {
+  if (typeof window === "undefined" || !("Notification" in window) || Notification.permission !== "granted") return;
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.ready.then(reg =>
+      reg?.showNotification(title, { body, icon: "/favicon.ico", vibrate: [200, 100, 200] } as any)
+    );
+  } else {
+    try { new Notification(title, { body, icon: "/favicon.ico" }); }
+    catch (e) { console.warn("Mobile browser blocked Notification constructor", e); }
+  }
+};
+
+const loadClinicDetails = (
+  activeAppt: any,
+  apiBase: string,
+  token: string | undefined,
+  setClinicDetails: (fn: any) => void
+) => {
+  const authHeader = token ? `Bearer ${token}` : "";
+  fetch(`${apiBase}/api/clinic-metadata/${activeAppt.doctorId}`, { headers: { Authorization: authHeader } })
+    .then(r => { if (!r.ok) throw new Error("Clinic details unreachable"); return r.json(); })
+    .then(metadata => {
+      setClinicDetails({
+        doctorName: activeAppt.doctorName || "Loading...",
+        speciality: activeAppt.specialty || activeAppt.speciality || "General Medicine",
+        clinicAddress: metadata?.clinicName || metadata?.clinicAddress || activeAppt.clinicAddress || "Clinic Address",
+        pharmacy: metadata?.facilities?.some((f: string) => f.toLowerCase().includes("pharmacy")) ? "Yes" : "No",
+        wheelchairAccess: !!metadata?.facilities?.some((f: string) => f.toLowerCase().includes("wheelchair")),
+        startTime: activeAppt.clinicStartTime || null,
+        endTime: activeAppt.clinicEndTime || null,
+      });
+    })
+    .catch(() =>
+      setClinicDetails({
+        doctorName: activeAppt.doctorName || "Loading...",
+        speciality: activeAppt.specialty || activeAppt.speciality || "General Medicine",
+        clinicAddress: activeAppt.clinicAddress || "Clinic Address",
+        pharmacy: "Yes",
+        wheelchairAccess: true,
+        startTime: activeAppt.clinicStartTime || null,
+        endTime: activeAppt.clinicEndTime || null,
+      })
+    );
+
+  fetch(`${apiBase}/api/availability/doctor/${activeAppt.doctorId}`, { headers: { Authorization: authHeader } })
+    .then(r => r.json())
+    .then(availData => {
+      if (Array.isArray(availData)) {
+        const avail = availData.find((a: any) => a.date === activeAppt.date);
+        if (avail) {
+          setClinicDetails((prev: any) => prev ? { ...prev, startTime: avail.startTime || null, endTime: avail.endTime || null } : null);
+        }
+      }
+    })
+    .catch(console.error);
+};
+
+const resolveWalkInTime = (
+  clinicOpensAt: string | null,
+  clinicDetails: any,
+  tokensAhead: number
+): { h: number; m: number } => {
+  const startStr = clinicOpensAt || clinicDetails?.startTime || '11:55';
+  let [h, m] = startStr.trim().split(":").map(Number);
+  if (Number.isNaN(h)) h = 11;
+  if (Number.isNaN(m)) m = 55;
+  return { h, m };
+};
+
 export default function Tracker() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -259,49 +330,14 @@ export default function Tracker() {
     } else if (msg.type === "CALL_PATIENT" && isMatch) {
       setIsRinging(true);
       const msgText = msg.message || "URGENT: Please report to the Mediator desk immediately.";
-      setNotification({
-        message: msgText,
-        urgent: true,
-      });
-      
-      // Native notification
-      if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
-        if ("serviceWorker" in navigator) {
-          navigator.serviceWorker.ready.then(reg => reg?.showNotification("Urgent Mediator Alert", { body: msgText, icon: "/favicon.ico", vibrate: [200, 100, 200] } as any));
-        } else {
-          try {
-            new Notification("Urgent Mediator Alert", { body: msgText, icon: "/favicon.ico" });
-          } catch (e) {
-            console.warn("Mobile browser blocked Notification constructor", e);
-          }
-        }
-      }
-
-      const ringInterval = setInterval(() => {
-        playNotificationSound("bell");
-      }, 3000);
+      setNotification({ message: msgText, urgent: true });
+      sendNativeNotification("Urgent Mediator Alert", msgText);
+      const ringInterval = setInterval(() => { playNotificationSound("bell"); }, 3000);
       (window as any)._ringInterval = ringInterval;
     } else if (msg.type === "SIGNAL_PATIENT" && isMatch) {
       const msgText = msg.message || "You are NEXT: Please prepare to enter the clinic.";
-      setNotification({
-        message: msgText,
-        urgent: false,
-        isTurnSignal: true,
-      });
-
-      // Native notification
-      if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
-        if ("serviceWorker" in navigator) {
-          navigator.serviceWorker.ready.then(reg => reg?.showNotification("Mediator Queue Alert", { body: msgText, icon: "/favicon.ico", vibrate: [200, 100, 200] } as any));
-        } else {
-          try {
-            new Notification("Mediator Queue Alert", { body: msgText, icon: "/favicon.ico" });
-          } catch (e) {
-            console.warn("Mobile browser blocked Notification constructor", e);
-          }
-        }
-      }
-
+      setNotification({ message: msgText, urgent: false, isTurnSignal: true });
+      sendNativeNotification("Mediator Queue Alert", msgText);
       playNotificationSound("beep");
       setTimeout(() => setNotification(null), 20000);
     } else if ((msg.type === "PATIENT_DISCHARGED" || msg.type === "DISCHARGE") && isMatch) {
@@ -410,56 +446,7 @@ export default function Tracker() {
 
             // Sync clinic details
             if (activeAppt.doctorId) {
-              const detailUrl = `${apiBase}/api/clinic-metadata/${activeAppt.doctorId}`;
-              fetch(detailUrl, {
-                headers: { Authorization: token ? `Bearer ${token}` : "" },
-              })
-                .then((r) => {
-                  if (!r.ok) throw new Error("Clinic details unreachable");
-                  return r.json();
-                })
-                .then((metadata) => {
-                  setClinicDetails({
-                    doctorName: activeAppt.doctorName || "Loading...",
-                    speciality: activeAppt.specialty || activeAppt.speciality || "General Medicine",
-                    clinicAddress: metadata?.clinicName || metadata?.clinicAddress || activeAppt.clinicAddress || "Clinic Address",
-                    pharmacy: metadata?.facilities?.some((f: string) => f.toLowerCase().includes("pharmacy")) ? "Yes" : "No",
-                    wheelchairAccess: !!metadata?.facilities?.some((f: string) => f.toLowerCase().includes("wheelchair")),
-                    startTime: activeAppt.clinicStartTime || null,
-                    endTime: activeAppt.clinicEndTime || null,
-                  });
-                })
-                .catch(() =>
-                  setClinicDetails({
-                    doctorName: activeAppt.doctorName || "Loading...",
-                    speciality: activeAppt.specialty || activeAppt.speciality || "General Medicine",
-                    clinicAddress: activeAppt.clinicAddress || "Clinic Address",
-                    pharmacy: "Yes",
-                    wheelchairAccess: true,
-                    startTime: activeAppt.clinicStartTime || null,
-                    endTime: activeAppt.clinicEndTime || null,
-                  })
-                );
-
-              fetch(`${apiBase}/api/availability/doctor/${activeAppt.doctorId}`, {
-                headers: { Authorization: token ? `Bearer ${token}` : "" },
-              })
-                .then((r) => r.json())
-                .then((availData) => {
-                  if (Array.isArray(availData)) {
-                    const avail = availData.find((a: any) => a.date === activeAppt.date);
-                    if (avail) {
-                      setClinicDetails((prev) =>
-                        prev ? { 
-                          ...prev, 
-                          startTime: avail.startTime || null,
-                          endTime: avail.endTime || null
-                        } : null
-                      );
-                    }
-                  }
-                })
-                .catch(console.error);
+              loadClinicDetails(activeAppt, apiBase, token, setClinicDetails);
             }
           } else {
             console.warn("[Tracker] No active appointment found on backend.");
@@ -670,18 +657,13 @@ export default function Tracker() {
         d.setHours(11, 55, 0, 0);
       }
     } else {
-      const startStr = clinicOpensAt || clinicDetails?.startTime || '11:55';
-      let [h, m] = startStr.trim().split(":").map(Number);
-      if (Number.isNaN(h)) h = 11;
-      if (Number.isNaN(m)) m = 55;
+      const { h, m } = resolveWalkInTime(clinicOpensAt, clinicDetails, tokensAhead);
       d.setHours(h, m, 0, 0);
-      
+
       // Dynamic shift: If the clinic opening time has passed, the true queue base is NOW
       const now = new Date();
-      if (d.getTime() < now.getTime()) {
-         d = new Date(now.getTime());
-      }
-      
+      if (d.getTime() < now.getTime()) d = new Date(now.getTime());
+
       d.setMinutes(d.getMinutes() + (tokensAhead || 0) * 15);
     }
     return d;

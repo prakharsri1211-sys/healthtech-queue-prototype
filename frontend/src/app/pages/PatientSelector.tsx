@@ -55,6 +55,81 @@ const validatePatientForm = (form: PatientForm, account: Account | null, isUpdat
   return null;
 };
 
+// ── Helpers extracted to keep PatientSelector CC ≤ 15 ───────────────────────
+
+const purgeLocalMockData = (userId: string) => {
+  const localKey = `patients_${userId}`;
+  const localPatients = localStorage.getItem(localKey);
+  if (!localPatients) return;
+  try {
+    const parsed = JSON.parse(localPatients);
+    if (Array.isArray(parsed) && parsed.some((p: any) => p.name === 'abc123' || p.name === 'def123' || p.name === 'ghi123')) {
+      console.log("[Clinical Clean] Purging mock local storage profiles");
+      localStorage.removeItem(localKey);
+    }
+  } catch (e) {}
+};
+
+const purgeStaleBooking = () => {
+  const bookingStr = localStorage.getItem("bookingInfo");
+  if (!bookingStr) return;
+  try {
+    const booking = JSON.parse(bookingStr);
+    const todayStr = new Date().toISOString().split("T")[0];
+    if (booking.date < todayStr || booking.status === APP_STATUS.COMPLETED || booking.status === APP_STATUS.CANCELLED || booking.status === APP_STATUS.NO_SHOW) {
+      console.log("[Clinical Guard] Purging stale booking session:", booking.id);
+      localStorage.removeItem("bookingInfo");
+    }
+  } catch (e) {
+    localStorage.removeItem("bookingInfo");
+  }
+};
+
+const loadAccountFromBackend = async (
+  u: any,
+  apiBase: string,
+  setAccount: (a: any) => void,
+  setSelectedPatientId: (id: any) => void,
+  navigate: (path: string) => void
+) => {
+  const token = u.token;
+  const headers = { "Content-Type": "application/json", "Authorization": `Bearer ${token}` };
+  try {
+    const r = await fetch(`${apiBase}/api/patient/account/${u.id}`, { headers });
+    if (r.ok) {
+      const data = await r.json();
+      if (Array.isArray(data)) {
+        const mappedPatients = data.map((p: any) => ({
+          ...p,
+          aadharId: p.identityType === 'AADHAR' ? p.aadharOrAbhaId : undefined,
+          abhaId: p.identityType === 'ABHA' ? p.aadharOrAbhaId : undefined
+        }));
+        setAccount({ id: u.id, username: u.username, patients: mappedPatients });
+        if (data.length > 0) setSelectedPatientId(data[0].id || data[0].patientId || "");
+      }
+    } else if (r.status === 401 || r.status === 404) {
+      localStorage.clear();
+      sessionStorage.clear();
+      navigate("/");
+    }
+  } catch (_) {
+    const localKey = `patients_${u.id}`;
+    const mockAccount = { id: u.id || "local", username: u.username, patients: [] as any[] };
+    const localPatients = localStorage.getItem(localKey);
+    if (localPatients) mockAccount.patients = JSON.parse(localPatients);
+    setAccount(mockAccount);
+    if (mockAccount.patients.length > 0) setSelectedPatientId(mockAccount.patients[0].id);
+  }
+};
+
+const resolveActiveAppointment = (data: any): any | null => {
+  if (!data) return null;
+  if (data.hasActiveAppointment === true || data.todayAppointment || (data.activeAppointments && data.activeAppointments.length > 0) || data.nextActiveAppointment) {
+    return data.todayAppointment || (data.activeAppointments && data.activeAppointments[0]) || data.nextActiveAppointment || null;
+  }
+  return null;
+};
+
 export default function PatientSelector() {
   const api = (import.meta as any).env.VITE_API_URL || "https://online-queue-project.onrender.com";
   const navigate = useNavigate();
@@ -96,88 +171,25 @@ export default function PatientSelector() {
 
     const userStr = localStorage.getItem("user") || localStorage.getItem("currentUser");
     const u = userStr ? JSON.parse(userStr) : null;
-    
-    if (!u) {
-      navigate("/");
-      return;
-    }
+    if (!u) { navigate("/"); return; }
 
-    // Purge any local storage fallback that contains mock data like abc123
-    const localKey = `patients_${u.id}`;
-    const localPatients = localStorage.getItem(localKey);
-    if (localPatients) {
-      try {
-        const parsed = JSON.parse(localPatients);
-        if (Array.isArray(parsed) && parsed.some((p: any) => p.name === 'abc123' || p.name === 'def123' || p.name === 'ghi123')) {
-          console.log("[Clinical Clean] Purging mock local storage profiles");
-          localStorage.removeItem(localKey);
-        }
-      } catch (e) {}
-    }
+    purgeLocalMockData(String(u.id));
 
     // ROLE GUARD: Prevent non-patients from accessing this portal
     if (u.role !== APP_ROLES.PATIENT) {
       console.warn("[SECURITY] Unauthorized Patient Portal Access Attempt by:", u.role);
-      const target = u.role === APP_ROLES.DOCTOR ? "/doctor" : "/mediator";
-      navigate(target);
+      navigate(u.role === APP_ROLES.DOCTOR ? "/doctor" : "/mediator");
       return;
     }
 
-    const token = u.token;
     const apiBase = (import.meta as any).env.VITE_API_URL || "https://online-queue-project.onrender.com";
-    const headers = { "Content-Type": "application/json", "Authorization": `Bearer ${token}` };
-    
-    // Always try to fetch from backend for fresh data
     if (u.id) {
-      fetch(`${apiBase}/api/patient/account/${u.id}`, { headers })
-        .then(async r => {
-          if (r.ok) {
-            const data = await r.json();
-            if (Array.isArray(data)) {
-              const mappedPatients = data.map((p: any) => ({
-                ...p,
-                aadharId: p.identityType === 'AADHAR' ? p.aadharOrAbhaId : undefined,
-                abhaId: p.identityType === 'ABHA' ? p.aadharOrAbhaId : undefined
-              }));
-              const refreshedAccount: Account = { id: u.id, username: u.username, patients: mappedPatients };
-              setAccount(refreshedAccount);
-              if (data.length > 0 && !selectedPatientId) {
-                 setSelectedPatientId(data[0].id || data[0].patientId || "");
-              }
-            }
-          } else if (r.status === 401 || r.status === 404) {
-            localStorage.clear();
-            sessionStorage.clear();
-            navigate("/");
-          }
-        })
-        .catch(() => {
-          // FALLBACK: Local Storage
-          const mockAccount: Account = { id: u.id || "local", username: u.username, patients: [] };
-          const localPatients = localStorage.getItem(`patients_${mockAccount.id}`);
-          if (localPatients) mockAccount.patients = JSON.parse(localPatients);
-          setAccount(mockAccount);
-          if (mockAccount.patients.length > 0) setSelectedPatientId(mockAccount.patients[0].id);
-        })
-        .finally(() => setLoading(false));
+      loadAccountFromBackend(u, apiBase, setAccount, setSelectedPatientId, navigate).finally(() => setLoading(false));
     } else {
       setLoading(false);
     }
 
-    // 2. STALE SESSION HARDENING: Clear booking info if it belongs to a past date or is marked completed
-    const bookingStr = localStorage.getItem("bookingInfo");
-    if (bookingStr) {
-      try {
-        const booking = JSON.parse(bookingStr);
-        const todayStr = new Date().toISOString().split("T")[0];
-        if (booking.date < todayStr || booking.status === APP_STATUS.COMPLETED || booking.status === APP_STATUS.CANCELLED || booking.status === APP_STATUS.NO_SHOW) {
-          console.log("[Clinical Guard] Purging stale booking session:", booking.id);
-          localStorage.removeItem("bookingInfo");
-        }
-      } catch (e) {
-        localStorage.removeItem("bookingInfo");
-      }
-    }
+    purgeStaleBooking();
   }, [navigate, loaded, api]);
 
   const handleAddPatient = async () => {
@@ -365,57 +377,42 @@ export default function PatientSelector() {
   };
 
   const handlePatientContinue = async (e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    if (!selectedPatientId) {
-      setError("Please select a patient.");
-      return;
-    }
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    if (!selectedPatientId) { setError("Please select a patient."); return; }
 
     setCheckingGatekeeper(true);
     try {
-      let selectedPatient = account?.patients.find(
-        p => p.id.toString() === selectedPatientId.toString()
+      const selectedPatient = account?.patients.find(
+        p => String(p.id) === String(selectedPatientId) || String(p.patientId) === String(selectedPatientId)
       );
-      if (!selectedPatient && account?.patients) {
-        selectedPatient = account.patients.find(
-          p => String(p.id) === String(selectedPatientId) || String(p.patientId) === String(selectedPatientId)
-        );
-      }
       if (selectedPatient) {
         sessionStorage.setItem("selectedPatient", JSON.stringify(selectedPatient));
         localStorage.removeItem("bookingInfo");
         localStorage.removeItem("hadAppointmentToday");
       }
-      
+
       const userStr = localStorage.getItem("user") || localStorage.getItem("currentUser");
       const u = userStr ? JSON.parse(userStr) : null;
       const token = u?.token;
-      
+
       const res = await fetch(`${api}/api/appointments/patient/${selectedPatientId}/check-active?_t=${Date.now()}`, {
         headers: { "Authorization": token ? `Bearer ${token}` : "", "Content-Type": "application/json" },
         cache: "no-store"
       });
-      
+
       if (!res.ok) throw new Error('Gatekeeper check failed');
-      
+
       const data = await res.json();
       localStorage.setItem('currentPatientId', String(selectedPatientId));
-      
-      if (data && (data.hasActiveAppointment === true || data.todayAppointment || (data.activeAppointments && data.activeAppointments.length > 0) || data.nextActiveAppointment)) {
-          const activeAppt = data.todayAppointment || (data.activeAppointments && data.activeAppointments[0]) || data.nextActiveAppointment;
-          if (activeAppt) {
-            localStorage.setItem('bookingInfo', JSON.stringify(activeAppt));
-          }
-          navigate('/tracker', { replace: true });
-          return;
+
+      const activeAppt = resolveActiveAppointment(data);
+      if (activeAppt) {
+        localStorage.setItem('bookingInfo', JSON.stringify(activeAppt));
+        navigate('/tracker', { replace: true });
+        return;
       }
-      
+
       navigate('/specialty-selection', { replace: true });
-      return;
-      
     } catch (err: any) {
       const existing = localStorage.getItem('bookingInfo');
       if (existing) {

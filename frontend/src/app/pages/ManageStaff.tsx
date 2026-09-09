@@ -39,6 +39,30 @@ const assignMediator = async (
   }
 };
 
+// ── Helpers extracted to keep ManageStaff component CC ≤ 15 ──────────────────
+
+const resolveRoleGuard = (u: any, navigate: (path: string) => void): boolean => {
+  if (u.role !== "ROLE_DOCTOR") {
+    console.warn("[SECURITY] Unauthorized Staff Management attempt by:", u.role);
+    navigate(u.role === "ROLE_MEDIATOR" ? "/mediator" : "/patient-portal");
+    return false;
+  }
+  return true;
+};
+
+const fetchHiredMediator = (
+  dId: string,
+  token: string,
+  setHiredMediator: (v: { assigned: boolean; username?: string; fullName?: string; id?: number } | null) => void
+) => {
+  fetch(`${API}/api/doctor/${dId}/hired-mediator`, {
+    headers: { Authorization: token ? `Bearer ${token}` : "" }
+  })
+    .then(r => r.json())
+    .then(data => setHiredMediator(data))
+    .catch(() => setHiredMediator({ assigned: false }));
+};
+
 export default function ManageStaff() {
   const navigate = useNavigate();
   const [darkMode, setDarkMode] = useState(true);
@@ -60,28 +84,14 @@ export default function ManageStaff() {
     const userStr = localStorage.getItem("user") || localStorage.getItem("currentUser");
     if (!userStr) { navigate("/"); return; }
     const u = JSON.parse(userStr);
-    
+
     // 🛡️ ROLE GUARD: Only doctors can manage staff
-    if (u.role !== "ROLE_DOCTOR") {
-      console.warn("[SECURITY] Unauthorized Staff Management attempt by:", u.role);
-      const target = u.role === "ROLE_MEDIATOR" ? "/mediator" : "/patient-portal";
-      navigate(target);
-      return;
-    }
+    if (!resolveRoleGuard(u, navigate)) return;
 
     setUser(u);
-    // doctorId is stored in u.doctorId or resolved via account
     const dId = u.doctorId || u.id;
     setDoctorId(dId);
-
-    // Fetch existing hired mediator
-    const token = u.token;
-    fetch(`${API}/api/doctor/${dId}/hired-mediator`, {
-      headers: { Authorization: token ? `Bearer ${token}` : "" }
-    })
-      .then(r => r.json())
-      .then(data => setHiredMediator(data))
-      .catch(() => setHiredMediator({ assigned: false }));
+    fetchHiredMediator(dId, u.token, setHiredMediator);
   }, [navigate]);
 
   const handleHire = async () => {

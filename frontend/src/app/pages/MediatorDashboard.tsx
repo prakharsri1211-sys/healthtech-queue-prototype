@@ -67,7 +67,6 @@ function OverdueCounter({ startTime, date }: { startTime: string; date?: string 
     </div>
   );
 }
-}
 
 const handleWebSocketMessage = (
   msg: any,
@@ -378,7 +377,6 @@ export default function MediatorDashboard() {
       lastProcessedMessageRef.current = msg;
       console.log("WebSocket received:", msg);
       handleWebSocketMessage(msg, sessionInfo, setPatients, setDoctorReady, setShiftStarted, setSessionFlash);
-    }
     }
   }, [lastJsonMessage, lastMessage, sessionInfo]);
 

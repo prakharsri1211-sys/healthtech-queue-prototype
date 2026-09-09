@@ -60,29 +60,11 @@ const calculateShiftStatus = (
     clinicStartMinutes = Number.parseInt(parts[0], 10) * 60 + Number.parseInt(parts[1] || '0', 10);
   }
 
-  if (todayAppointments && todayAppointments.length > 0) {
-    const parsedTimes = todayAppointments
-      .map((a: any) => {
-        if (!a.timeSlot || a.timeSlot === 'Direct Walk-in') return null;
-        const parts = a.timeSlot.split(' ');
-        const hm = parts[0].split(':');
-        let h = Number.parseInt(hm[0], 10);
-        const m = Number.parseInt(hm[1] || '0', 10);
-        if (parts[1]?.toUpperCase() === 'PM' && h < 12) h += 12;
-        if (parts[1]?.toUpperCase() === 'AM' && h === 12) h = 0;
-        return { h, m };
-      })
-      .filter(Boolean) as { h: number; m: number }[];
-
-    if (parsedTimes.length > 0) {
-      parsedTimes.sort((a, b) => a.h * 60 + a.m - (b.h * 60 + b.m));
-      const earliest = parsedTimes[0];
-      const apptMinutes = earliest.h * 60 + earliest.m;
-      
-      if (apptMinutes < clinicStartMinutes) {
-          startTimeStr = `${String(earliest.h).padStart(2, '0')}:${String(earliest.m).padStart(2, '0')}:00`;
-      }
-    }
+  // Extract earliest appointment time logic to sub-helper
+  const rawEarliestStr = parseEarliestApptTime(todayAppointments);
+  if (rawEarliestStr) {
+    const [h, m] = rawEarliestStr.split(':').map(Number);
+    if (h * 60 + m < clinicStartMinutes) startTimeStr = rawEarliestStr;
   }
 
   if (!startTimeStr && todayAvailability?.startTime) {
@@ -174,6 +156,58 @@ const triggerEmergencyAlarm = () => {
     playAlarmCycle();
   } catch (e) {
     console.warn("Web Audio emergency alarm failed:", e);
+  }
+};
+
+// ── Helpers extracted to reduce DoctorDashboard component CC ─────────────────
+
+const parseEarliestApptTime = (todayAppointments: any[]): string | null => {
+  if (!todayAppointments || todayAppointments.length === 0) return null;
+  const parsedTimes = todayAppointments
+    .map((a: any) => {
+      if (!a.timeSlot || a.timeSlot === 'Direct Walk-in') return null;
+      const parts = a.timeSlot.split(' ');
+      const hm = parts[0].split(':');
+      let h = Number.parseInt(hm[0], 10);
+      const m = Number.parseInt(hm[1] || '0', 10);
+      if (parts[1]?.toUpperCase() === 'PM' && h < 12) h += 12;
+      if (parts[1]?.toUpperCase() === 'AM' && h === 12) h = 0;
+      return { h, m };
+    })
+    .filter(Boolean) as { h: number; m: number }[];
+  if (parsedTimes.length === 0) return null;
+  parsedTimes.sort((a, b) => a.h * 60 + a.m - (b.h * 60 + b.m));
+  const earliest = parsedTimes[0];
+  return `${String(earliest.h).padStart(2, '0')}:${String(earliest.m).padStart(2, '0')}:00`;
+};
+
+const handleQueueMessage = (
+  msg: any,
+  user: any,
+  setPatients: (fn: any) => void,
+  setEmergencyActive: (v: boolean) => void,
+  setEmergencyData: (v: any) => void,
+  setShiftStarted: (v: boolean) => void
+) => {
+  if (msg.type === "QUEUE_UPDATE" || msg.type === "QUEUE_SYNC") {
+    const allPatients = Array.isArray(msg.patients) ? msg.patients : [];
+    setPatients(() =>
+      user?.id
+        ? allPatients.filter((p: any) => String(p.doctorId) === String(user.doctorId || user.id))
+        : allPatients
+    );
+    (window as any).refreshStats?.();
+  } else if (msg.type === "PATIENT_DISCHARGED") {
+    setPatients((prev: any[]) => prev.filter((p: any) => String(p.id) !== String(msg.patientId)));
+    (window as any).refreshStats?.();
+  } else if (msg.type === "EMERGENCY_ALERT") {
+    setEmergencyActive(true);
+    setEmergencyData(msg);
+    triggerEmergencyAlarm();
+  } else if (msg.type === "SHIFT_STARTED") {
+    const msgDocId = msg.doctorId?.toString();
+    const userDocId = (user?.doctorId || user?.id)?.toString();
+    if (msgDocId === userDocId) setShiftStarted(true);
   }
 };
 
@@ -409,34 +443,14 @@ export default function DoctorDashboard(): React.JSX.Element {
   useEffect(() => {
     if (queueMessage && queueMessage !== lastProcessedMessageRef.current) {
       lastProcessedMessageRef.current = queueMessage;
-      const msg: any = queueMessage;
-      if (msg.type === "QUEUE_UPDATE" || msg.type === "QUEUE_SYNC") {
-        const allPatients = Array.isArray(msg.patients) ? msg.patients : [];
-        if (user?.id) {
-          setPatients(
-            allPatients.filter(
-              (p: any) => String(p.doctorId) === String(user.doctorId || user.id)
-            )
-          );
-        } else {
-          setPatients(allPatients);
-        }
-        (window as any).refreshStats?.();
-      } else if (msg.type === "PATIENT_DISCHARGED") {
-        setPatients(prev => prev.filter(p => String(p.id) !== String(msg.patientId)));
-        (window as any).refreshStats?.();
-      } else if (msg.type === "EMERGENCY_ALERT") {
-        setEmergencyActive(true);
-        setEmergencyData(msg);
-        // Instant Web Audio API alarm — no network latency
-        triggerEmergencyAlarm();
-      } else if (msg.type === "SHIFT_STARTED") {
-        const msgDocId = msg.doctorId?.toString();
-        const userDocId = (user?.doctorId || user?.id)?.toString();
-        if (msgDocId === userDocId) {
-           setShiftStarted(true);
-        }
-      }
+      handleQueueMessage(
+        queueMessage as any,
+        user,
+        setPatients,
+        setEmergencyActive,
+        setEmergencyData,
+        setShiftStarted
+      );
     }
   }, [queueMessage, user]);
 

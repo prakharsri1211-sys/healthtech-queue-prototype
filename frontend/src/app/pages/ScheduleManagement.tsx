@@ -17,7 +17,6 @@ interface DayAvailability {
   premiumCapacity: number;
   standardCapacity: number;
 }
-}
 
 const syncScheduleAvailability = async (
   dateStr: string,
