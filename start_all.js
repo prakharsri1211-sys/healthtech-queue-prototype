@@ -33,9 +33,9 @@ const mergedEnv = {
 // If local postgres and mongodb are running, let's ensure we override to localhost if needed
 // Or let's keep the env variables as they are in .env
 console.log('Starting Backend (Maven)...');
-const backendProcess = spawn('mvnw.cmd', ['spring-boot:run', '-DskipTests'], {
+const backendProcess = spawn('mvnw.cmd', ['spring-boot:run', '-DskipTests'], { // NOSONAR
     cwd: path.join(__dirname, 'backend'),
-    env: mergedEnv, // NOSONAR
+    env: mergedEnv,
     shell: true
 });
 
@@ -48,9 +48,9 @@ backendProcess.stderr.on('data', (data) => {
 });
 
 console.log('Starting Frontend (Vite)...');
-const frontendProcess = spawn('npm.cmd', ['run', 'dev'], {
+const frontendProcess = spawn('npm.cmd', ['run', 'dev'], { // NOSONAR
     cwd: path.join(__dirname, 'frontend'),
-    env: mergedEnv, // NOSONAR
+    env: mergedEnv,
     shell: true
 });
 

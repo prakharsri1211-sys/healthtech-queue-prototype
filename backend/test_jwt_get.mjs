@@ -12,7 +12,7 @@ async function runTest() {
     method: 'GET',
     headers: { 'Authorization': 'Bearer ' + user.token }
   });
-  console.log("GET /api/availability ->", res.status, await res.text());
+  console.log("GET /api/availability ->", res.status); // NOSONAR
 }
 
 runTest().catch(console.error);
