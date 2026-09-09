@@ -1,5 +1,5 @@
 const { MongoClient } = require('mongodb');
-const crypto = require('crypto');
+const crypto = require('node:crypto');
 
 // Use environment variable for MongoDB URI to avoid hardcoded credentials
 const uri = process.env.MONGO_URI || "mongodb://localhost:27017/healthtech";

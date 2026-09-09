@@ -76,16 +76,13 @@ export default function DeveloperMenu() {
 
       {/* Overlay */}
       {isOpen && (
-        <div
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') setIsOpen(false);
-          }}
-          className="absolute inset-0 bg-black/30 -z-10"
+        <button
+          type="button"
+          aria-label="Close menu"
+          className="absolute inset-0 bg-black/30 -z-10 w-full h-full cursor-default"
           onClick={() => setIsOpen(false)}
           style={{ left: "-100vw" }}
-        ></div>
+        ></button>
       )}
     </div>
   );
