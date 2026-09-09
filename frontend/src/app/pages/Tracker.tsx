@@ -1039,9 +1039,7 @@ export default function Tracker() {
 
             {phase === "CANCELED" ? (
               <div className="text-center py-6">
-                <div className={`inline-flex items-center justify-center w-20 h-20 rounded-full mb-4 border ${
-                  darkMode ? "bg-rose-500/20 border-rose-500/30" : "bg-rose-500/20 border-rose-500/30"
-                }`}>
+                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full mb-4 border bg-rose-500/20 border-rose-500/30">
                   <AlertTriangle size={36} className="text-rose-600" />
                 </div>
                 <h2 className="text-3xl font-black text-rose-700 tracking-tight mb-2">Booking Canceled</h2>
