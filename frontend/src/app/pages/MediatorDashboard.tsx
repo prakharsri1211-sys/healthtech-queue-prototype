@@ -449,7 +449,7 @@ export default function MediatorDashboard() {
   const glassBg = darkMode ? "bg-white/[0.03]" : "bg-slate-50/80";
   const borderCol = darkMode ? "border-white/[0.06]" : "border-slate-200/80";
   const textColor = darkMode ? "text-white" : "text-[#1a1a2e]";
-  const subTextColor = darkMode ? "text-slate-500" : "text-slate-500";
+  const subTextColor = "text-slate-500";
 
   useEffect(() => {
     const timer = setInterval(() => {

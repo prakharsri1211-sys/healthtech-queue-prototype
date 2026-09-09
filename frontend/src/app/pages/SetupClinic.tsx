@@ -66,9 +66,10 @@ export default function SetupClinic() {
             {setupSteps.map((step, idx) => {
               const Icon = step.icon;
               return (
-                <div
+                <button
                   key={idx}
-                  className="bg-white rounded-xl p-4 flex items-start justify-between cursor-pointer hover:shadow-md transition"
+                  type="button"
+                  className="w-full text-left bg-white rounded-xl p-4 flex items-start justify-between cursor-pointer hover:shadow-md transition"
                   style={{ border: "1px solid var(--border-color)" }}
                   onClick={() => navigate(step.action)}
                 >
@@ -89,7 +90,7 @@ export default function SetupClinic() {
                     </div>
                   </div>
                   <ChevronRight className="w-5 h-5" style={{ color: "var(--slate-gray)" }} />
-                </div>
+                </button>
               );
             })}
           </div>

@@ -332,12 +332,13 @@ export default function SpecialtySelectionPage(): React.JSX.Element | null {
                                             />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <h3 
+                                            <button 
+                                                type="button"
                                                 onClick={() => navigate(`/doctor-profile/${doc.id}`)}
-                                                className="text-xl font-bold truncate cursor-pointer hover:text-sky-400 transition-colors"
+                                                className="block text-left w-full text-xl font-bold truncate cursor-pointer hover:text-sky-400 transition-colors bg-transparent border-none p-0 focus:outline-none"
                                             >
                                                 {doc.name}
-                                            </h3>
+                                            </button>
                                             <p className="text-xs font-bold uppercase tracking-wider text-sky-400 mt-0.5">
                                                 {doc.speciality}
                                             </p>

@@ -470,7 +470,7 @@ export default function SignUpPage(): React.JSX.Element {
 
                                 <div className="space-y-4">
                                     <div className="flex justify-between items-center px-1">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Clinic Coordinates</label>
+                                        <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">Clinic Coordinates</div>
                                     </div>
                                     <LocationSelectorMap 
                                         theme="light"

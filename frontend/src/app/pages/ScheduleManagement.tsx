@@ -405,7 +405,7 @@ export default function ScheduleManagement(): React.JSX.Element {
                     </div>
 
                     <div className="space-y-4">
-                       <label className="text-xs font-black uppercase tracking-widest text-slate-500">Clinical Hours</label>
+                       <div className="text-xs font-black uppercase tracking-widest text-slate-500">Clinical Hours</div>
                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="space-y-2">
                              <label htmlFor="clinicalStart" className="block text-[10px] font-black uppercase text-slate-600">Start</label>
@@ -433,7 +433,7 @@ export default function ScheduleManagement(): React.JSX.Element {
                     </div>
 
                     <div className="space-y-4">
-                       <label className="text-xs font-black uppercase tracking-widest text-slate-500">Slot Allocation</label>
+                       <div className="text-xs font-black uppercase tracking-widest text-slate-500">Slot Allocation</div>
                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                          <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20">
                            <div className="flex items-center gap-2 mb-2">
