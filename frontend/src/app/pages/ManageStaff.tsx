@@ -5,6 +5,40 @@ import { motion, AnimatePresence } from "motion/react";
 
 const API = (import.meta as any).env.VITE_API_URL || "https://online-queue-project.onrender.com";
 
+const assignMediator = async (
+  url: string,
+  payload: any,
+  token: string,
+  setLoadingState: (v: boolean) => void,
+  setError: (v: string) => void,
+  setSuccess: (v: string) => void,
+  onSuccessCallback: (data: any) => void
+) => {
+  setLoadingState(true);
+  setError("");
+  setSuccess("");
+  try {
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token ? `Bearer ${token}` : ""
+      },
+      body: JSON.stringify(payload)
+    });
+    const data = await resp.json();
+    if (resp.ok) {
+      onSuccessCallback(data);
+    } else {
+      setError(data.error || "Failed to hire mediator.");
+    }
+  } catch (e) {
+    setError("Connection failed. Ensure the backend is running.");
+  } finally {
+    setLoadingState(false);
+  }
+};
+
 export default function ManageStaff() {
   const navigate = useNavigate();
   const [darkMode, setDarkMode] = useState(true);
@@ -19,7 +53,7 @@ export default function ManageStaff() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", darkMode ? "dark" : "light");
+    document.documentElement.dataset.theme = darkMode ? "dark" : "light";
   }, [darkMode]);
 
   useEffect(() => {
@@ -52,70 +86,40 @@ export default function ManageStaff() {
 
   const handleHire = async () => {
     if (!mediatorUsername.trim()) { setError("Please enter a mediator username."); return; }
-    setLoading(true);
-    setError("");
-    setSuccess("");
+    const token = user?.token;
 
-    const userStr = localStorage.getItem("user") || localStorage.getItem("currentUser");
-    const u = userStr ? JSON.parse(userStr) : null;
-    const token = u?.token;
-
-    try {
-      const resp = await fetch(`${API}/api/doctor/${doctorId}/hire-mediator`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: token ? `Bearer ${token}` : ""
-        },
-        body: JSON.stringify({ username: mediatorUsername.trim() })
-      });
-      const data = await resp.json();
-      if (resp.ok) {
+    assignMediator(
+      `${API}/api/doctor/${doctorId}/hire-mediator`,
+      { username: mediatorUsername.trim() },
+      token,
+      setLoading,
+      setError,
+      setSuccess,
+      (data) => {
         setSuccess(`✓ Mediator "${data.mediatorName}" assigned successfully. This is a permanent clinical association.`);
         setHiredMediator({ assigned: true, username: mediatorUsername, fullName: data.mediatorName });
         setMediatorUsername("");
-      } else {
-        setError(data.error || "Failed to hire mediator. Check the username.");
       }
-    } catch (e) {
-      setError("Connection failed. Ensure the backend is running.");
-    } finally {
-      setLoading(false);
-    }
+    );
   };
 
   const handleHireByToken = async () => {
     if (!mediatorToken.trim()) { setError("Please enter an identity token."); return; }
-    setTokenLoading(true);
-    setError("");
-    setSuccess("");
+    const token = user?.token;
 
-    const userStr = localStorage.getItem("user") || localStorage.getItem("currentUser");
-    const u = userStr ? JSON.parse(userStr) : null;
-    const token = u?.token;
-
-    try {
-      const resp = await fetch(`${API}/api/doctor/${doctorId}/hire-mediator-by-token`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: token ? `Bearer ${token}` : ""
-        },
-        body: JSON.stringify({ identityToken: mediatorToken.trim() })
-      });
-      const data = await resp.json();
-      if (resp.ok) {
+    assignMediator(
+      `${API}/api/doctor/${doctorId}/hire-mediator-by-token`,
+      { identityToken: mediatorToken.trim() },
+      token,
+      setTokenLoading,
+      setError,
+      setSuccess,
+      (data) => {
         setSuccess(`✓ Mediator "${data.mediatorName}" linked via identity token.`);
         setHiredMediator({ assigned: true, username: data.username, fullName: data.mediatorName });
         setMediatorToken("");
-      } else {
-        setError(data.error || "Failed to find mediator by identity token.");
       }
-    } catch (e) {
-      setError("Connection failed. Ensure the backend is running.");
-    } finally {
-      setTokenLoading(false);
-    }
+    );
   };
 
   const textColor = darkMode ? "text-white" : "text-[#0F172A]";

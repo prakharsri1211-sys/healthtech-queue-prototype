@@ -41,6 +41,142 @@ interface Patient {
   doctorId?: string;
   tier?: string | null;
 }
+
+const calculateShiftStatus = (
+  now: Date,
+  todayAvailability: any,
+  todayAppointments: any[],
+  patientsCount: number
+): {
+  timeToShift: string;
+  isOvertime: boolean;
+} => {
+  let startTimeStr: string | null = null;
+  let shiftDate: string | null = todayAvailability?.date || null;
+  
+  let clinicStartMinutes = Infinity;
+  if (todayAvailability?.startTime) {
+    const parts = todayAvailability.startTime.split(':');
+    clinicStartMinutes = Number.parseInt(parts[0], 10) * 60 + Number.parseInt(parts[1] || '0', 10);
+  }
+
+  if (todayAppointments && todayAppointments.length > 0) {
+    const parsedTimes = todayAppointments
+      .map((a: any) => {
+        if (!a.timeSlot || a.timeSlot === 'Direct Walk-in') return null;
+        const parts = a.timeSlot.split(' ');
+        const hm = parts[0].split(':');
+        let h = Number.parseInt(hm[0], 10);
+        const m = Number.parseInt(hm[1] || '0', 10);
+        if (parts[1]?.toUpperCase() === 'PM' && h < 12) h += 12;
+        if (parts[1]?.toUpperCase() === 'AM' && h === 12) h = 0;
+        return { h, m };
+      })
+      .filter(Boolean) as { h: number; m: number }[];
+
+    if (parsedTimes.length > 0) {
+      parsedTimes.sort((a, b) => a.h * 60 + a.m - (b.h * 60 + b.m));
+      const earliest = parsedTimes[0];
+      const apptMinutes = earliest.h * 60 + earliest.m;
+      
+      if (apptMinutes < clinicStartMinutes) {
+          startTimeStr = `${String(earliest.h).padStart(2, '0')}:${String(earliest.m).padStart(2, '0')}:00`;
+      }
+    }
+  }
+
+  if (!startTimeStr && todayAvailability?.startTime) {
+    startTimeStr = todayAvailability.startTime;
+  }
+
+  let timeToShift = "Awaiting Schedule";
+  if (!startTimeStr) {
+    return { timeToShift, isOvertime: false };
+  }
+
+  let shiftTime = new Date(now);
+  if (shiftDate) {
+    const [y, mon, d] = shiftDate.split("-").map(Number);
+    shiftTime = new Date(y, mon - 1, d);
+  }
+  const [h, m, s] = startTimeStr.split(":").map(Number);
+  shiftTime.setHours(h, m || 0, s || 0, 0);
+
+  if (now.getTime() >= shiftTime.getTime()) {
+    if (todayAvailability?.closed) {
+      timeToShift = "Clinic Closed Today";
+    } else {
+      timeToShift = "READY";
+    }
+  } else {
+    const diff = shiftTime.getTime() - now.getTime();
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hrs = Math.floor((diff % (1000 * 60 * 60 * 24)) / 3600000);
+    const mins = Math.floor((diff % 3600000) / 60000).toString().padStart(2, '0');
+    const secs = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
+
+    if (days > 0) {
+      timeToShift = `${days}d ${hrs}h ${mins}m ${secs}s`;
+    } else {
+      timeToShift = `${hrs}h ${mins}m ${secs}s`;
+    }
+  }
+
+  let isOvertime = false;
+  if (todayAvailability?.endTime) {
+    let endTime = new Date(now);
+    if (shiftDate) {
+      const [y, mon, d] = shiftDate.split("-").map(Number);
+      endTime = new Date(y, mon - 1, d);
+    }
+    const [eh, em, es] = todayAvailability.endTime.split(":").map(Number);
+    endTime.setHours(eh, em || 0, es || 0, 0);
+
+    if (now.getTime() > endTime.getTime() && patientsCount > 0) {
+        isOvertime = true;
+    }
+  }
+  
+  return { timeToShift, isOvertime };
+};
+
+const triggerEmergencyAlarm = () => {
+  try {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    const ctx = new AudioCtx();
+    const playAlarmCycle = () => {
+      if (!(window as any).__emergencyAlarmActive) return;
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc1.type = "sawtooth";
+      osc1.frequency.setValueAtTime(800, ctx.currentTime);
+      osc1.frequency.linearRampToValueAtTime(1200, ctx.currentTime + 0.5);
+      osc1.frequency.linearRampToValueAtTime(800, ctx.currentTime + 1.0);
+      osc2.type = "square";
+      osc2.frequency.setValueAtTime(600, ctx.currentTime);
+      osc2.frequency.linearRampToValueAtTime(900, ctx.currentTime + 0.5);
+      osc2.frequency.linearRampToValueAtTime(600, ctx.currentTime + 1.0);
+      gain.gain.setValueAtTime(0.35, ctx.currentTime);
+      gain.gain.setValueAtTime(0.35, ctx.currentTime + 0.9);
+      gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 1.0);
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(ctx.destination);
+      osc1.start(ctx.currentTime);
+      osc2.start(ctx.currentTime);
+      osc1.stop(ctx.currentTime + 1.0);
+      osc2.stop(ctx.currentTime + 1.0);
+      setTimeout(playAlarmCycle, 1200);
+    };
+    (window as any).__emergencyAlarmActive = true;
+    (window as any).__emergencyAudioCtx = ctx;
+    playAlarmCycle();
+  } catch (e) {
+    console.warn("Web Audio emergency alarm failed:", e);
+  }
+};
+
 export default function DoctorDashboard(): React.JSX.Element {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [todayCount, setTodayCount] = useState(0);
@@ -206,92 +342,10 @@ export default function DoctorDashboard(): React.JSX.Element {
       const now = new Date();
       setCurrentTime(now);
 
-      // --- Issue 1 Fix: Use earliest appointment time as the shift gate ---
-      // Fix: Find the absolute earliest time between clinic schedule AND booked appointments
-      let startTimeStr: string | null = null;
-      let shiftDate: string | null = todayAvailability?.date || null;
+      const status = calculateShiftStatus(now, todayAvailability, todayAppointments, patients.length);
+      setTimeToShift(status.timeToShift);
       
-      let clinicStartMinutes = Infinity;
-      if (todayAvailability?.startTime) {
-        const parts = todayAvailability.startTime.split(':');
-        clinicStartMinutes = Number.parseInt(parts[0], 10) * 60 + Number.parseInt(parts[1] || '0', 10);
-      }
-
-      if (todayAppointments && todayAppointments.length > 0) {
-        // Parse all appointment timeSlots and find the earliest
-        const parsedTimes = todayAppointments
-          .map((a: any) => {
-            if (!a.timeSlot || a.timeSlot === 'Direct Walk-in') return null;
-            const parts = a.timeSlot.split(' ');
-            const hm = parts[0].split(':');
-            let h = Number.parseInt(hm[0], 10);
-            const m = Number.parseInt(hm[1] || '0', 10);
-            if (parts[1]?.toUpperCase() === 'PM' && h < 12) h += 12;
-            if (parts[1]?.toUpperCase() === 'AM' && h === 12) h = 0;
-            return { h, m, raw: a.timeSlot };
-          })
-          .filter(Boolean) as { h: number; m: number; raw: string }[];
-
-        if (parsedTimes.length > 0) {
-          parsedTimes.sort((a, b) => a.h * 60 + a.m - (b.h * 60 + b.m));
-          const earliest = parsedTimes[0];
-          const apptMinutes = earliest.h * 60 + earliest.m;
-          
-          if (apptMinutes < clinicStartMinutes) {
-              startTimeStr = `${String(earliest.h).padStart(2, '0')}:${String(earliest.m).padStart(2, '0')}:00`;
-          }
-        }
-      }
-
-      // Fallback to clinic availability start time
-      if (!startTimeStr && todayAvailability?.startTime) {
-        startTimeStr = todayAvailability.startTime;
-      }
-
-      if (!startTimeStr) {
-        setTimeToShift("Awaiting Schedule");
-        return;
-      }
-
-      let shiftTime = new Date(now);
-      if (shiftDate) {
-        const [y, mon, d] = shiftDate.split("-").map(Number);
-        shiftTime = new Date(y, mon - 1, d);
-      }
-      const [h, m, s] = startTimeStr.split(":").map(Number);
-      shiftTime.setHours(h, m || 0, s || 0, 0);
-
-      if (now.getTime() >= shiftTime.getTime()) {
-        if (todayAvailability?.closed) {
-          setTimeToShift("Clinic Closed Today");
-        } else {
-          setTimeToShift("READY");
-        }
-      } else {
-        const diff = shiftTime.getTime() - now.getTime();
-        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-        const hrs = Math.floor((diff % (1000 * 60 * 60 * 24)) / 3600000);
-        const mins = Math.floor((diff % 3600000) / 60000).toString().padStart(2, '0');
-        const secs = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
-
-        if (days > 0) {
-          setTimeToShift(`${days}d ${hrs}h ${mins}m ${secs}s`);
-        } else {
-          setTimeToShift(`${hrs}h ${mins}m ${secs}s`);
-        }
-      }
-
-      // Check for Overtime
-      if (todayAvailability?.endTime) {
-        let endTime = new Date(now);
-        if (shiftDate) {
-          const [y, mon, d] = shiftDate.split("-").map(Number);
-          endTime = new Date(y, mon - 1, d);
-        }
-        const [eh, em, es] = todayAvailability.endTime.split(":").map(Number);
-        endTime.setHours(eh, em || 0, es || 0, 0);
-
-        if (now.getTime() > endTime.getTime() && patients.length > 0) {
+      if (status.isOvertime) {
           if (!isOvertime) {
              setIsOvertime(true);
              if (!hasPlayedOvertimeChime) {
@@ -299,10 +353,9 @@ export default function DoctorDashboard(): React.JSX.Element {
                 setHasPlayedOvertimeChime(true);
              }
           }
-        } else {
+      } else {
           setIsOvertime(false);
           setHasPlayedOvertimeChime(false);
-        }
       }
     };
     
@@ -376,41 +429,7 @@ export default function DoctorDashboard(): React.JSX.Element {
         setEmergencyActive(true);
         setEmergencyData(msg);
         // Instant Web Audio API alarm — no network latency
-        try {
-          const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-          const ctx = new AudioCtx();
-          const playAlarmCycle = () => {
-            if (!(window as any).__emergencyAlarmActive) return;
-            // High-pitched urgent siren sweep
-            const osc1 = ctx.createOscillator();
-            const osc2 = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc1.type = "sawtooth";
-            osc1.frequency.setValueAtTime(800, ctx.currentTime);
-            osc1.frequency.linearRampToValueAtTime(1200, ctx.currentTime + 0.5);
-            osc1.frequency.linearRampToValueAtTime(800, ctx.currentTime + 1.0);
-            osc2.type = "square";
-            osc2.frequency.setValueAtTime(600, ctx.currentTime);
-            osc2.frequency.linearRampToValueAtTime(900, ctx.currentTime + 0.5);
-            osc2.frequency.linearRampToValueAtTime(600, ctx.currentTime + 1.0);
-            gain.gain.setValueAtTime(0.35, ctx.currentTime);
-            gain.gain.setValueAtTime(0.35, ctx.currentTime + 0.9);
-            gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 1.0);
-            osc1.connect(gain);
-            osc2.connect(gain);
-            gain.connect(ctx.destination);
-            osc1.start(ctx.currentTime);
-            osc2.start(ctx.currentTime);
-            osc1.stop(ctx.currentTime + 1.0);
-            osc2.stop(ctx.currentTime + 1.0);
-            setTimeout(playAlarmCycle, 1200);
-          };
-          (window as any).__emergencyAlarmActive = true;
-          (window as any).__emergencyAudioCtx = ctx;
-          playAlarmCycle();
-        } catch (e) {
-          console.warn("Web Audio emergency alarm failed:", e);
-        }
+        triggerEmergencyAlarm();
       } else if (msg.type === "SHIFT_STARTED") {
         const msgDocId = msg.doctorId?.toString();
         const userDocId = (user?.doctorId || user?.id)?.toString();
@@ -422,10 +441,7 @@ export default function DoctorDashboard(): React.JSX.Element {
   }, [queueMessage, user]);
 
   useEffect(() => {
-    document.documentElement.setAttribute(
-      "data-theme",
-      darkMode ? "dark" : "light"
-    );
+    document.documentElement.dataset.theme = darkMode ? "dark" : "light";
   }, [darkMode]);
 
   useEffect(() => {

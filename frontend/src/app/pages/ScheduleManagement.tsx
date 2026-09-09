@@ -17,6 +17,84 @@ interface DayAvailability {
   premiumCapacity: number;
   standardCapacity: number;
 }
+}
+
+const syncScheduleAvailability = async (
+  dateStr: string,
+  docId: any,
+  token: string,
+  currentConfig: any,
+  setSaving: (v: boolean) => void,
+  setSaveMsg: (v: string) => void,
+  setSaveMsgType: (v: "ok" | "err") => void,
+  setAvailability: React.Dispatch<React.SetStateAction<DayAvailability[]>>
+) => {
+  setSaving(true);
+  setSaveMsg("SYNCING...");
+  setSaveMsgType("ok");
+  
+  try {
+    const payload = {
+      doctorId: docId,
+      date: dateStr,
+      startTime: currentConfig.startTime ? currentConfig.startTime + ":00" : null,
+      endTime: currentConfig.endTime ? currentConfig.endTime + ":00" : null,
+      closed: !currentConfig.isOpen,
+      premiumCapacity: currentConfig.premiumCapacity,
+      standardCapacity: currentConfig.standardCapacity,
+    };
+
+    console.log("[ScheduleManagement] Outgoing Payload:", payload);
+    const saveUrl = `${API}/api/availability`;
+    console.log("[ScheduleManagement] Sync Connection Target:", saveUrl);
+    
+    const resp = await fetch(saveUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": token ? `Bearer ${token}` : ""
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (resp.ok) {
+      const saved = await resp.json();
+      console.log("[ScheduleManagement] Save Success - Received ID:", saved.id);
+      setAvailability(prev => {
+        const exists = prev.find(e => e.date === dateStr);
+        if (exists) {
+          return prev.map(e => e.date === dateStr ? { ...e, id: saved.id } : e);
+        } else {
+          return [...prev, {
+            id: saved.id,
+            date: dateStr,
+            isOpen: !saved.closed,
+            bookedCount: 0,
+            startTime: currentConfig.startTime,
+            endTime: currentConfig.endTime,
+            premiumCapacity: currentConfig.premiumCapacity,
+            standardCapacity: currentConfig.standardCapacity,
+          }];
+        }
+      });
+      setSaveMsg("✓ SAVED");
+      setSaveMsgType("ok");
+    } else {
+      const errText = await resp.text();
+      console.error("[ScheduleManagement] Save Failed. Status:", resp.status, "Body:", errText);
+      const cleanErr = errText.split("\n")[0].substring(0, 100);
+      setSaveMsg(`SAVE FAILED (${resp.status}): ${cleanErr}`);
+      setSaveMsgType("err");
+    }
+  } catch (e) {
+    console.error("[ScheduleManagement] Network error:", e);
+    setSaveMsg("✗ NETWORK ERROR");
+    setSaveMsgType("err");
+  } finally {
+    setSaving(false);
+    setTimeout(() => setSaveMsg(""), 3000);
+  }
+};
 
 export default function ScheduleManagement(): React.JSX.Element {
   const navigate = useNavigate();
@@ -171,80 +249,16 @@ export default function ScheduleManagement(): React.JSX.Element {
     
     console.log(`[ScheduleManagement] Sync Triggered - Date: ${dateStr}, Initial DocID: ${docId}`);
 
-    const doSave = async () => {
-      setSaving(true);
-      setSaveMsg("SYNCING...");
-      setSaveMsgType("ok");
-      
-      try {
-        // Validation: If we suspect we are using an Account ID instead of a Doctor PK, 
-        // the backend fallback in AvailabilityController usually handles it, 
-        // but we verify here if the doctorId is actually the Account ID.
-        
-        const payload = {
-          doctorId: docId,
-          date: dateStr,
-          startTime: currentConfig.startTime ? currentConfig.startTime + ":00" : null,
-          endTime: currentConfig.endTime ? currentConfig.endTime + ":00" : null,
-          closed: !currentConfig.isOpen,
-          premiumCapacity: currentConfig.premiumCapacity,
-          standardCapacity: currentConfig.standardCapacity,
-        };
-
-        console.log("[ScheduleManagement] Outgoing Payload:", payload);
-        const saveUrl = `${API}/api/availability`;
-        console.log("[ScheduleManagement] Sync Connection Target:", saveUrl);
-        
-        const resp = await fetch(saveUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": token ? `Bearer ${token}` : ""
-          },
-          body: JSON.stringify(payload)
-        });
-
-        if (resp.ok) {
-          const saved = await resp.json();
-          console.log("[ScheduleManagement] Save Success - Received ID:", saved.id);
-          // Update local state with the returned DB id
-          setAvailability(prev => {
-            const exists = prev.find(e => e.date === dateStr);
-            if (exists) {
-              return prev.map(e => e.date === dateStr ? { ...e, id: saved.id } : e);
-            } else {
-              return [...prev, {
-                id: saved.id,
-                date: dateStr,
-                isOpen: !saved.closed,
-                bookedCount: 0,
-                startTime: currentConfig.startTime,
-                endTime: currentConfig.endTime,
-                premiumCapacity: currentConfig.premiumCapacity,
-                standardCapacity: currentConfig.standardCapacity,
-              }];
-            }
-          });
-          setSaveMsg("✓ SAVED");
-          setSaveMsgType("ok");
-        } else {
-          const errText = await resp.text();
-          console.error("[ScheduleManagement] Save Failed. Status:", resp.status, "Body:", errText);
-          const cleanErr = errText.split("\n")[0].substring(0, 100);
-          setSaveMsg(`SAVE FAILED (${resp.status}): ${cleanErr}`);
-          setSaveMsgType("err");
-        }
-      } catch (e) {
-        console.error("[ScheduleManagement] Network error:", e);
-        setSaveMsg("✗ NETWORK ERROR");
-        setSaveMsgType("err");
-      } finally {
-        setSaving(false);
-        setTimeout(() => setSaveMsg(""), 3000);
-      }
-    };
-
-    doSave();
+    syncScheduleAvailability(
+      dateStr,
+      docId,
+      token,
+      currentConfig,
+      setSaving,
+      setSaveMsg,
+      setSaveMsgType,
+      setAvailability
+    );
   }, [pendingSave]);
 
   const getDayData = (date: Date): DayAvailability | undefined => {

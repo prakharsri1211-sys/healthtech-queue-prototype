@@ -57,6 +57,37 @@ const CAPABILITIES: Capability[] = [
   }
 ];
 
+const fetchAndLoadFacilities = async (
+  userId: string,
+  setSelected: (v: string[]) => void,
+  setStartTime: (v: string) => void,
+  setEndTime: (v: string) => void,
+  setBreakStartTime: (v: string) => void,
+  setBreakEndTime: (v: string) => void
+) => {
+  try {
+    const apiBase = (import.meta as any).env.VITE_API_URL || "https://online-queue-project.onrender.com";
+    const res = await fetch(`${apiBase}/api/clinic-metadata/${userId}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.facilities && Array.isArray(data.facilities)) {
+         setSelected(data.facilities);
+      }
+    }
+    
+    const docRes = await fetch(`${apiBase}/api/doctor/${userId}/clinic-details`);
+    if (docRes.ok) {
+      const docData = await docRes.json();
+      if (docData.startTime) setStartTime(docData.startTime.slice(0, 5));
+      if (docData.endTime) setEndTime(docData.endTime.slice(0, 5));
+      if (docData.breakStartTime) setBreakStartTime(docData.breakStartTime.slice(0, 5));
+      if (docData.breakEndTime) setBreakEndTime(docData.breakEndTime.slice(0, 5));
+    }
+  } catch (err) {
+    console.error("Error loading facilities:", err);
+  }
+};
+
 export default function ClinicInfrastructure(): React.JSX.Element {
   const navigate = useNavigate();
   const [selected, setSelected] = useState<string[]>([]);
@@ -73,34 +104,11 @@ export default function ClinicInfrastructure(): React.JSX.Element {
   };
 
   useEffect(() => {
-    const loadFacilities = async () => {
-      const userStr = localStorage.getItem("user") || localStorage.getItem("currentUser");
-      const user = userStr ? JSON.parse(userStr) : null;
-      if (!user || !user.id) return;
-      
-      try {
-        const apiBase = (import.meta as any).env.VITE_API_URL || "https://online-queue-project.onrender.com";
-        const res = await fetch(`${apiBase}/api/clinic-metadata/${user.id}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.facilities && Array.isArray(data.facilities)) {
-             setSelected(data.facilities);
-          }
-        }
-        
-        const docRes = await fetch(`${apiBase}/api/doctor/${user.id}/clinic-details`);
-        if (docRes.ok) {
-          const docData = await docRes.json();
-          if (docData.startTime) setStartTime(docData.startTime.slice(0, 5));
-          if (docData.endTime) setEndTime(docData.endTime.slice(0, 5));
-          if (docData.breakStartTime) setBreakStartTime(docData.breakStartTime.slice(0, 5));
-          if (docData.breakEndTime) setBreakEndTime(docData.breakEndTime.slice(0, 5));
-        }
-      } catch (err) {
-        console.error("Error loading facilities:", err);
-      }
-    };
-    loadFacilities();
+    const userStr = localStorage.getItem("user") || localStorage.getItem("currentUser");
+    const user = userStr ? JSON.parse(userStr) : null;
+    if (user && user.id) {
+        fetchAndLoadFacilities(user.id, setSelected, setStartTime, setEndTime, setBreakStartTime, setBreakEndTime);
+    }
   }, []);
 
   const handleSave = async () => {

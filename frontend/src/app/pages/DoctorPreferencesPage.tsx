@@ -12,6 +12,13 @@ const specialties = [
     { id: "ophthal", name: "Ophthalmology", icon: <Eye size={20} /> },
 ];
 
+const mapAgeRange = (ageRange: string) => {
+    if (ageRange === "All Ages") return "ADULT";
+    if (ageRange.includes("Pediatrics")) return "CHILD";
+    if (ageRange.includes("Geriatrics")) return "SENIOR";
+    return "ADULT";
+};
+
 export default function DoctorPreferencesPage(): React.JSX.Element {
     const navigate = useNavigate();
     const [step, setStep] = useState(1);
@@ -63,7 +70,7 @@ export default function DoctorPreferencesPage(): React.JSX.Element {
                     },
                     body: JSON.stringify({
                         genderPreference: prefs.genderPref.toUpperCase(),
-                        targetAgeRange: prefs.ageRange === "All Ages" ? "ADULT" : (prefs.ageRange.includes("Pediatrics") ? "CHILD" : (prefs.ageRange.includes("Geriatrics") ? "SENIOR" : "ADULT"))
+                        targetAgeRange: mapAgeRange(prefs.ageRange)
                     })
                 });
                 navigate("/doctor-onboarding");

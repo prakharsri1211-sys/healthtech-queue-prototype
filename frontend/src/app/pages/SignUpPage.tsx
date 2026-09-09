@@ -5,6 +5,23 @@ import { motion, AnimatePresence } from "motion/react";
 import { ClinicLocationSetup } from "../components/doctor/ClinicLocationSetup";
 import { LocationSelectorMap } from "../components/patient/LocationSelectorMap";
 
+const validateSignUpForm = (formData: any, role: string, isVerified: boolean) => {
+    const cleanPhone = formData.phone.replace(/\D/g, "");
+    if (cleanPhone.length !== 10) return "Contact Protocol (Phone) must be exactly 10 digits";
+    if (formData.password !== formData.confirmPassword) return "Passwords do not match";
+    if (role === "patient" && (!formData.age || Number.isNaN(Number(formData.age)) || Number(formData.age) <= 0)) {
+        return "Please enter a valid age";
+    }
+    if (formData.aadharId && !/^\d{12}$/.test(formData.aadharId.replace(/\s/g, ""))) {
+        return "Aadhar must be exactly 12 digits";
+    }
+    if (!isVerified && (role === "doctor" || role === "mediator")) {
+        return "Identity verification required";
+    }
+    if (formData.password.length < 8) return "Password must be at least 8 characters long";
+    return null;
+};
+
 export default function SignUpPage(): React.JSX.Element {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
@@ -62,39 +79,9 @@ export default function SignUpPage(): React.JSX.Element {
         setError("");
         setIsLoading(true);
         
-        const cleanPhone = formData.phone.replace(/\D/g, "");
-        if (cleanPhone.length !== 10) {
-            setError("Contact Protocol (Phone) must be exactly 10 digits");
-            setIsLoading(false);
-            return;
-        }
-        
-        if (formData.password !== formData.confirmPassword) {
-            setError("Passwords do not match");
-            setIsLoading(false);
-            return;
-        }
-
-        if (role === "patient" && (!formData.age || Number.isNaN(Number(formData.age)) || Number(formData.age) <= 0)) {
-            setError("Please enter a valid age");
-            setIsLoading(false);
-            return;
-        }
-
-        if (formData.aadharId && !/^\d{12}$/.test(formData.aadharId.replace(/\s/g, ""))) {
-            setError("Aadhar must be exactly 12 digits");
-            setIsLoading(false);
-            return;
-        }
-
-        if (!isVerified && (role === "doctor" || role === "mediator")) {
-            setError("Identity verification required");
-            setIsLoading(false);
-            return;
-        }
-
-        if (formData.password.length < 8) {
-            setError("Password must be at least 8 characters long");
+        const validationError = validateSignUpForm(formData, role, isVerified);
+        if (validationError) {
+            setError(validationError);
             setIsLoading(false);
             return;
         }

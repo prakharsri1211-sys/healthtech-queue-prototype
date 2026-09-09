@@ -14,7 +14,94 @@ interface TelemetryLog {
     resolved: boolean;
 }
 
-export default function AdminLogs() {
+const LogCard = ({ log, copyLog, markResolved }: { log: TelemetryLog, copyLog: (l: TelemetryLog) => void, markResolved: (id: string) => void }) => {
+    return (
+        <div className={`p-6 rounded-2xl border transition-all ${log.source === 'USER_ACTION' ? 'border-sky-500/20 bg-sky-500/5' : log.source === 'ACCESS' ? 'border-purple-500/20 bg-purple-500/5' : log.resolved ? 'border-emerald-500/20 bg-emerald-500/5 opacity-60' : log.source === 'FRONTEND' ? 'border-orange-500/20 bg-orange-500/5' : 'border-rose-500/20 bg-rose-500/5'}`}>
+            <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-4">
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${log.source === 'USER_ACTION' ? 'bg-sky-500/20 text-sky-400' : log.source === 'ACCESS' ? 'bg-purple-500/20 text-purple-400' : log.source === 'FRONTEND' ? 'bg-orange-500/20 text-orange-400' : 'bg-rose-500/20 text-rose-400'}`}>
+                        {log.source === 'USER_ACTION' ? <Activity size={24} /> : log.source === 'ACCESS' ? <Globe size={24} /> : log.source === 'FRONTEND' ? <Smartphone size={24} /> : <Server size={24} />}
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-3 mb-1">
+                            <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md ${log.source === 'USER_ACTION' ? 'bg-sky-500/20 text-sky-400' : log.source === 'ACCESS' ? 'bg-purple-500/20 text-purple-400' : log.source === 'FRONTEND' ? 'bg-orange-500/20 text-orange-400' : 'bg-rose-500/20 text-rose-400'}`}>
+                                {log.source.replace('_', ' ')}
+                            </span>
+                            <span className="text-slate-400 text-xs font-mono flex items-center gap-1">
+                                <Clock size={12} />
+                                {new Date(log.timestamp).toLocaleString()}
+                            </span>
+                            {log.resolved && log.source !== 'ACCESS' && (
+                                <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md bg-emerald-500/20 text-emerald-400">
+                                    RESOLVED
+                                </span>
+                            )}
+                        </div>
+                        <h3 className="text-lg font-bold text-white break-words">{log.message}</h3>
+                    </div>
+                </div>
+                <div className="flex gap-2">
+                    <button onClick={() => copyLog(log)} className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white flex items-center gap-2 transition-all">
+                        <Copy size={14} />
+                        <span className="text-xs font-bold uppercase tracking-wider">Copy</span>
+                    </button>
+                    {!log.resolved && log.source !== 'ACCESS' && log.source !== 'USER_ACTION' && (
+                        <button onClick={() => markResolved(log.id)} className="px-4 py-2 rounded-xl bg-white/5 hover:bg-emerald-500/20 hover:text-emerald-400 text-slate-400 text-xs font-bold uppercase tracking-wider transition-all">
+                            Mark Resolved
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+                {log.url && (
+                    <div className="bg-black/40 p-3 rounded-xl border border-white/5 flex items-start gap-3">
+                        <Globe size={16} className="text-slate-500 shrink-0 mt-0.5" />
+                        <span className="text-xs font-mono text-slate-400 break-all">{log.url}</span>
+                    </div>
+                )}
+                {log.userAgent && (
+                    <div className="bg-black/40 p-3 rounded-xl border border-white/5 flex flex-col gap-2">
+                        <div className="flex items-center gap-3">
+                            <Laptop size={16} className="text-slate-500 shrink-0" />
+                            <span className="text-sm font-bold text-slate-200">
+                                {(()=>{
+                                    let ua = log.userAgent;
+                                    if (!ua) return "Unknown Device";
+                                    let browser = "Unknown Browser";
+                                    let os = "Unknown OS";
+                                    
+                                    if (ua.includes("Firefox")) browser = "Firefox";
+                                    else if (ua.includes("Edg")) browser = "Edge";
+                                    else if (ua.includes("Chrome") && !ua.includes("Edg")) browser = "Chrome/Brave";
+                                    else if (ua.includes("Safari") && !ua.includes("Chrome")) browser = "Safari";
+                                    
+                                    if (ua.includes("Win")) os = "Windows";
+                                    else if (ua.includes("Mac")) os = "MacOS";
+                                    else if (ua.includes("Linux")) os = "Linux";
+                                    else if (ua.includes("Android")) os = "Android";
+                                    else if (ua.includes("iPhone") || ua.includes("iPad")) os = "iOS";
+                            
+                                    return `${os} • ${browser}`;
+                                })()}
+                            </span>
+                        </div>
+                        <span className="text-[10px] font-mono text-slate-500 break-all">{log.userAgent}</span>
+                    </div>
+                )}
+            </div>
+
+            {log.stackTrace && (
+                <div className="mt-4 bg-black/60 rounded-xl p-4 overflow-x-auto border border-white/5 relative group">
+                    <div className="text-[10px] uppercase font-black tracking-widest text-slate-500 mb-2">Stack Trace</div>
+                    <pre className="text-[11px] font-mono text-slate-400 leading-relaxed">
+                        {log.stackTrace}
+                    </pre>
+                </div>
+            )}
+        </div>
+    );
+};export default function AdminLogs() {
     const [logs, setLogs] = useState<TelemetryLog[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState("ALL");
@@ -50,24 +137,7 @@ export default function AdminLogs() {
         }
     };
 
-    const parseUserAgent = (ua: string) => {
-        if (!ua) return "Unknown Device";
-        let browser = "Unknown Browser";
-        let os = "Unknown OS";
-        
-        if (ua.includes("Firefox")) browser = "Firefox";
-        else if (ua.includes("Edg")) browser = "Edge";
-        else if (ua.includes("Chrome") && !ua.includes("Edg")) browser = "Chrome/Brave";
-        else if (ua.includes("Safari") && !ua.includes("Chrome")) browser = "Safari";
-        
-        if (ua.includes("Win")) os = "Windows";
-        else if (ua.includes("Mac")) os = "MacOS";
-        else if (ua.includes("Linux")) os = "Linux";
-        else if (ua.includes("Android")) os = "Android";
-        else if (ua.includes("iPhone") || ua.includes("iPad")) os = "iOS";
 
-        return `${os} • ${browser}`;
-    };
 
     const copyLog = (log: TelemetryLog) => {
         const content = `[${log.source}] ${log.timestamp}\nMessage: ${log.message}\n\nStackTrace:\n${log.stackTrace || 'None'}\n\nURL: ${log.url || 'N/A'}`;
@@ -118,70 +188,7 @@ export default function AdminLogs() {
                 ) : (
                     <div className="space-y-4">
                         {filteredLogs.map(log => (
-                            <div key={log.id} className={`p-6 rounded-2xl border transition-all ${log.source === 'USER_ACTION' ? 'border-sky-500/20 bg-sky-500/5' : log.source === 'ACCESS' ? 'border-purple-500/20 bg-purple-500/5' : log.resolved ? 'border-emerald-500/20 bg-emerald-500/5 opacity-60' : log.source === 'FRONTEND' ? 'border-orange-500/20 bg-orange-500/5' : 'border-rose-500/20 bg-rose-500/5'}`}>
-                                <div className="flex items-start justify-between mb-4">
-                                    <div className="flex items-center gap-4">
-                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${log.source === 'USER_ACTION' ? 'bg-sky-500/20 text-sky-400' : log.source === 'ACCESS' ? 'bg-purple-500/20 text-purple-400' : log.source === 'FRONTEND' ? 'bg-orange-500/20 text-orange-400' : 'bg-rose-500/20 text-rose-400'}`}>
-                                            {log.source === 'USER_ACTION' ? <Activity size={24} /> : log.source === 'ACCESS' ? <Globe size={24} /> : log.source === 'FRONTEND' ? <Smartphone size={24} /> : <Server size={24} />}
-                                        </div>
-                                        <div>
-                                            <div className="flex items-center gap-3 mb-1">
-                                                <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md ${log.source === 'USER_ACTION' ? 'bg-sky-500/20 text-sky-400' : log.source === 'ACCESS' ? 'bg-purple-500/20 text-purple-400' : log.source === 'FRONTEND' ? 'bg-orange-500/20 text-orange-400' : 'bg-rose-500/20 text-rose-400'}`}>
-                                                    {log.source.replace('_', ' ')}
-                                                </span>
-                                                <span className="text-slate-400 text-xs font-mono flex items-center gap-1">
-                                                    <Clock size={12} />
-                                                    {new Date(log.timestamp).toLocaleString()}
-                                                </span>
-                                                {log.resolved && log.source !== 'ACCESS' && (
-                                                    <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md bg-emerald-500/20 text-emerald-400">
-                                                        RESOLVED
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <h3 className="text-lg font-bold text-white break-words">{log.message}</h3>
-                                        </div>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <button onClick={() => copyLog(log)} className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white flex items-center gap-2 transition-all">
-                                            <Copy size={14} />
-                                            <span className="text-xs font-bold uppercase tracking-wider">Copy</span>
-                                        </button>
-                                        {!log.resolved && log.source !== 'ACCESS' && log.source !== 'USER_ACTION' && (
-                                            <button onClick={() => markResolved(log.id)} className="px-4 py-2 rounded-xl bg-white/5 hover:bg-emerald-500/20 hover:text-emerald-400 text-slate-400 text-xs font-bold uppercase tracking-wider transition-all">
-                                                Mark Resolved
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-                                    {log.url && (
-                                        <div className="bg-black/40 p-3 rounded-xl border border-white/5 flex items-start gap-3">
-                                            <Globe size={16} className="text-slate-500 shrink-0 mt-0.5" />
-                                            <span className="text-xs font-mono text-slate-400 break-all">{log.url}</span>
-                                        </div>
-                                    )}
-                                    {log.userAgent && (
-                                        <div className="bg-black/40 p-3 rounded-xl border border-white/5 flex flex-col gap-2">
-                                            <div className="flex items-center gap-3">
-                                                <Laptop size={16} className="text-slate-500 shrink-0" />
-                                                <span className="text-sm font-bold text-slate-200">{parseUserAgent(log.userAgent)}</span>
-                                            </div>
-                                            <span className="text-[10px] font-mono text-slate-500 break-all">{log.userAgent}</span>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {log.stackTrace && (
-                                    <div className="mt-4 bg-black/60 rounded-xl p-4 overflow-x-auto border border-white/5 relative group">
-                                        <div className="text-[10px] uppercase font-black tracking-widest text-slate-500 mb-2">Stack Trace</div>
-                                        <pre className="text-[11px] font-mono text-slate-400 leading-relaxed">
-                                            {log.stackTrace}
-                                        </pre>
-                                    </div>
-                                )}
-                            </div>
+                            <LogCard key={log.id} log={log} copyLog={copyLog} markResolved={markResolved} />
                         ))}
                     </div>
                 )}

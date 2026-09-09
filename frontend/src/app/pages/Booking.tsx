@@ -18,6 +18,49 @@ interface FullAvailability {
   endTime?: string;
 }
 
+const validateBooking = (
+  selectedDate: string | null,
+  hasTodayAppointment: boolean,
+  doctor: any,
+  selectedTier: string,
+  selectedTime: string | null,
+  parseTimeToMinutes: (t: string) => number
+): string | null => {
+    const isToday = selectedDate === format(new Date(), "yyyy-MM-dd");
+    
+    if (isToday && hasTodayAppointment) {
+      return "Policy Restriction: You have already had an appointment today. Only one admission per day is permitted.";
+    }
+
+    if (isToday && doctor?.endTime) {
+      const now = new Date();
+      const currentTotalMinutes = now.getHours() * 60 + now.getMinutes();
+      const [eh, em] = doctor.endTime.split(":").map(Number);
+      const endTotalMinutes = eh * 60 + (em || 0);
+      
+      if (currentTotalMinutes >= endTotalMinutes) {
+        return "Clinic hours have officially concluded for today. The Doctor is in Overtime Mode and no new walk-ins or bookings are accepted.";
+      }
+    }
+
+    if (isToday && selectedTier === "premium" && selectedTime) {
+      const now = new Date();
+      const currentTotalMinutes = now.getHours() * 60 + now.getMinutes();
+      const selectedTotalMinutes = parseTimeToMinutes(selectedTime);
+      if (selectedTotalMinutes < currentTotalMinutes) {
+        return "The selected time slot has already passed. Please select a future time.";
+      }
+    }
+
+    if (selectedDate && (selectedTier === "free" || selectedTime)) {
+      if (!doctor || !doctor.id) {
+         return "CRITICAL_DOC_ERROR";
+      }
+    }
+    
+    return null;
+};
+
 export default function Booking() {
   const navigate = useNavigate();
 
@@ -339,39 +382,16 @@ export default function Booking() {
   };
 
   const handleBooking = async () => {
-    if (selectedDate === format(new Date(), "yyyy-MM-dd") && hasTodayAppointment) {
-      setBookingError("Policy Restriction: You have already had an appointment today. Only one admission per day is permitted.");
-      return;
-    }
-
-    if (selectedDate === format(new Date(), "yyyy-MM-dd") && doctor?.endTime) {
-      const now = new Date();
-      const currentTotalMinutes = now.getHours() * 60 + now.getMinutes();
-      const [eh, em] = doctor.endTime.split(":").map(Number);
-      const endTotalMinutes = eh * 60 + (em || 0);
-      
-      if (currentTotalMinutes >= endTotalMinutes) {
-        setBookingError("Clinic hours have officially concluded for today. The Doctor is in Overtime Mode and no new walk-ins or bookings are accepted.");
-        return;
-      }
-    }
-
-    if (selectedDate === format(new Date(), "yyyy-MM-dd") && selectedTier === "premium" && selectedTime) {
-      const now = new Date();
-      const currentTotalMinutes = now.getHours() * 60 + now.getMinutes();
-      const selectedTotalMinutes = parseTimeToMinutes(selectedTime);
-      if (selectedTotalMinutes < currentTotalMinutes) {
-        setBookingError("The selected time slot has already passed. Please select a future time.");
-        return;
-      }
-    }
-
-    if (selectedDate && (selectedTier === "free" || selectedTime)) {
-      if (!doctor || !doctor.id) {
+    const errorMsg = validateBooking(selectedDate, hasTodayAppointment, doctor, selectedTier, selectedTime, parseTimeToMinutes);
+    
+    if (errorMsg === "CRITICAL_DOC_ERROR") {
          setBookingError("Critical Error: Doctor session lost. Please return and select the doctor again.");
          setTimeout(() => navigate("/specialty-selection"), 3000);
          return;
-      }
+    } else if (errorMsg) {
+        setBookingError(errorMsg);
+        return;
+    }
 
       const userStr = localStorage.getItem("currentUser") || localStorage.getItem("user");
       const user = userStr ? JSON.parse(userStr) : { id: "p1", name: "Guest User" };

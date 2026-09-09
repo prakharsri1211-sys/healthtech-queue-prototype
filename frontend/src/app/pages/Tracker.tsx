@@ -176,7 +176,7 @@ export default function Tracker() {
 
   /* ── Theme sync ───────────────────────────────────────────── */
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", darkMode ? "dark" : "light");
+    document.documentElement.dataset.theme = darkMode ? "dark" : "light";
   }, [darkMode]);
 
   /* ── Live clock (1 s tick) & Overtime Logic ────────────────── */
@@ -1242,7 +1242,7 @@ export default function Tracker() {
                           <p className="text-xs font-black uppercase text-slate-500 tracking-wider">Doctor / Speciality</p>
                           <p className={`font-bold ${darkMode ? "text-slate-200" : "text-slate-800"}`}>
                             {clinicDetails?.doctorName || bookingInfo.doctorName || "Loading..."} (
-                            {clinicDetails?.speciality || bookingInfo.specialty || bookingInfo.speciality || "General Medicine"})
+                            {clinicDetails?.speciality || bookingInfo.specialty || "General Medicine"})
                           </p>
                         </div>
                       </div>

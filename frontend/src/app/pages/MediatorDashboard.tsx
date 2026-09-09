@@ -67,6 +67,165 @@ function OverdueCounter({ startTime, date }: { startTime: string; date?: string 
     </div>
   );
 }
+}
+
+const handleWebSocketMessage = (
+  msg: any,
+  sessionInfo: any,
+  setPatients: React.Dispatch<React.SetStateAction<Patient[]>>,
+  setDoctorReady: React.Dispatch<React.SetStateAction<boolean>>,
+  setShiftStarted: React.Dispatch<React.SetStateAction<boolean>>,
+  setSessionFlash: React.Dispatch<React.SetStateAction<string | null>>
+) => {
+  if (!(window as any).dischargedPatientsCache) {
+      (window as any).dischargedPatientsCache = new Set<string>();
+  }
+
+  if (msg.type === "QUEUE_SYNC") {
+    const seen = new Set<string>();
+    const sessDocId = sessionInfo?.doctorId?.toString();
+    const deduped = (msg.patients || []).filter((p: any) => {
+      const key = p.patientId || p.id;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      if (sessDocId && p.doctorId?.toString() !== sessDocId) return false;
+      if ((window as any).dischargedPatientsCache.has(key)) return false;
+      return true;
+    }).map((p: any) => ({
+      ...p,
+      id: p.id || p.patientId
+    }));
+    setPatients(deduped);
+  } else if (msg.type === "DOCTOR_READY") {
+    setDoctorReady(true);
+  } else if (msg.type === "SHIFT_STARTED") {
+    const msgDocId = msg.doctorId?.toString();
+    const sessDocId = sessionInfo?.doctorId?.toString();
+    if (msgDocId && sessDocId && msgDocId !== sessDocId) {
+      console.log("Ignored SHIFT_STARTED event for another doctor:", msgDocId);
+      return;
+    }
+    setShiftStarted(true);
+    setDoctorReady(true);
+    setSessionFlash("Clinical Shift Launched: Dashboard Unlocked");
+    setTimeout(() => setSessionFlash(null), 4000);
+  } else if (msg.type === "SET_ACTIVE") {
+    setDoctorReady(false);
+  } else if (msg.type === "PATIENT_DISCHARGED") {
+    if (msg.patientId) (window as any).dischargedPatientsCache?.add(String(msg.patientId));
+    setPatients(prev => prev.filter(p => 
+      String(p.id) !== String(msg.patientId) && 
+      String(p.patientId) !== String(msg.patientId) && 
+      String((p as any).appointmentId) !== String(msg.patientId)
+    ));
+  }
+};
+
+const PatientCard = ({ 
+  p, 
+  sectionTitle, 
+  isFirst, 
+  darkMode, 
+  borderCol, 
+  glassBg, 
+  textColor, 
+  subTextColor, 
+  sendTurnSignal, 
+  prioritizePatient, 
+  handleCallPatient 
+}: any) => {
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      className={`p-6 border group hover:scale-[1.005] transition-all duration-300 rounded-[32px] ${
+        p.status === APP_STATUS.IN_SESSION ? 'border-rose-500 ring-4 ring-rose-500/20 bg-rose-500/5 shadow-2xl shadow-rose-500/10' : 
+        p.tier === 'PREMIUM' ? 'border-amber-500/30 bg-amber-500/5' : `${borderCol} ${glassBg}`
+      }`}
+    >
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6">
+        <div className="flex items-center gap-4 sm:gap-5 w-full sm:w-auto">
+          <div className={`shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center font-black text-lg sm:text-xl shadow-inner ${
+            p.status === APP_STATUS.IN_SESSION ? 'bg-rose-500 text-white shadow-rose-500/40' :
+            p.tier === 'PREMIUM' ? 'bg-amber-500/20 text-amber-600' : 'bg-blue-500/20 text-blue-600'
+          }`}>
+            <span className="flex flex-col items-center justify-center text-center leading-tight">
+              {p.tier === 'PREMIUM' ? (
+                <>
+                  <Clock size={14} className="mb-0.5 sm:w-4 sm:h-4" />
+                  <span className="text-[8px] sm:text-[10px] font-black">{p.appointmentTime || 'ELITE'}</span>
+                </>
+              ) : (
+                <span className="text-lg sm:text-xl font-black italic">#{p.tokenNumber}</span>
+              )}
+            </span>
+          </div>
+          <div className="flex-1 min-w-0">
+               {sectionTitle === "Arrived / Waiting" && isFirst && (
+                 <div className="mb-1 sm:mb-2 inline-flex items-center gap-1.5 px-2 py-0.5 sm:px-3 sm:py-1 rounded-md sm:rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                   <Zap size={10} className="text-emerald-500 fill-current shrink-0" />
+                   <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-emerald-400 whitespace-nowrap">Next Priority</span>
+                 </div>
+               )}
+               <h4 className={`text-base sm:text-lg font-black tracking-tight leading-none ${textColor} truncate`}>{p.patientName || p.name}</h4>
+               {String(p.tier).toUpperCase() === 'PREMIUM' && (
+                  <div className={`px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-500 text-[7px] sm:text-[8px] font-black uppercase tracking-widest border border-amber-500/20 flex items-center gap-1.5 shadow-sm mt-1 w-fit`}>
+                   <Crown size={8} className="shrink-0" /> <span className="whitespace-nowrap">SLOT: {p.appointmentTime || 'ELITE'}</span>
+                  </div>
+               )}
+               <div className="flex items-center gap-2 sm:gap-3 mt-1.5">
+                <span className={`text-[8px] sm:text-[9px] font-black uppercase tracking-widest whitespace-nowrap ${
+                  p.status === APP_STATUS.ARRIVED || p.status === APP_STATUS.CHECKED_IN ? 'text-emerald-500' :
+                  p.status === APP_STATUS.WAITING ? 'text-blue-500' :
+                  p.status === APP_STATUS.IN_SESSION ? 'text-rose-400' : 'text-amber-500'
+                }`}>{p.status === APP_STATUS.CHECKED_IN ? 'CHECKED IN ✓' : p.status}</span>
+                <div className="w-1 h-1 rounded-full bg-slate-600 shrink-0" />
+                <div className="flex items-center gap-1 min-w-0">
+                  {String(p.tier).toUpperCase() === 'PREMIUM' ? <Crown size={10} className="text-amber-500 shrink-0" /> : <Ticket size={10} className="text-blue-500 shrink-0" />}
+                  <span className={`text-[8px] sm:text-[9px] font-black uppercase tracking-widest ${subTextColor} truncate`}>
+                    {p.tier} <span className="hidden sm:inline">TIER</span> {String(p.tier).toUpperCase() === 'PREMIUM' && p.appointmentTime ? `• ${p.appointmentTime}` : ''}
+                  </span>
+                </div>
+              </div>
+             </div>
+          </div>
+         <div className="flex flex-wrap items-center gap-2">
+            {p.status !== APP_STATUS.IN_SESSION ? (
+              <>
+                <button 
+                  onClick={() => sendTurnSignal(p)} 
+                  className="w-9 h-9 sm:w-10 sm:h-10 shrink-0 flex items-center justify-center rounded-lg sm:rounded-xl bg-emerald-500 text-white hover:bg-emerald-400 transition-all shadow-lg" 
+                  title="SIGNAL PATIENT"
+                >
+                  <BellRing size={14} className="sm:w-4 sm:h-4" />
+                </button>
+                {sectionTitle !== "Late / Delayed" && (
+                  <>
+                    <button
+                      onClick={() => prioritizePatient(p, "UP")}
+                      className="w-9 h-9 sm:w-10 sm:h-10 shrink-0 flex items-center justify-center rounded-lg sm:rounded-xl bg-blue-600 text-white hover:bg-blue-500 transition-all shadow-lg"
+                      title="Admit to Session Now"
+                    >
+                      <ArrowUp size={14} className="sm:w-4 sm:h-4" />
+                    </button>
+                    <button onClick={() => prioritizePatient(p, "DOWN")} className={`w-9 h-9 sm:w-10 sm:h-10 shrink-0 flex items-center justify-center rounded-lg sm:rounded-xl border ${darkMode ? 'bg-white/5 border-white/10 text-slate-300' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'} transition-all`} title="Move Down"><ArrowDown size={14} className="sm:w-4 sm:h-4" /></button>
+                  </>
+                )}
+                <button onClick={() => handleCallPatient(p)} className="flex-1 sm:flex-none flex items-center justify-center gap-2 h-9 sm:h-10 px-4 sm:px-5 rounded-lg sm:rounded-xl bg-blue-600 text-white font-black text-[9px] uppercase tracking-widest hover:bg-blue-500 transition-all shadow-lg shadow-blue-500/20 shrink-0 min-w-[80px]"><Phone size={12} className="shrink-0" /> Call</button>
+              </>
+            ) : (
+              <div className="px-4 py-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-[9px] font-black uppercase tracking-widest text-rose-400 flex items-center gap-2">
+                <Zap size={12} className="animate-pulse" />
+                Active Session
+              </div>
+            )}
+         </div>
+      </div>
+    </motion.div>
+  );
+};
 
 export default function MediatorDashboard() {
   const navigate = useNavigate();
@@ -202,7 +361,7 @@ export default function MediatorDashboard() {
   };
 
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", darkMode ? "dark" : "light");
+    document.documentElement.dataset.theme = darkMode ? "dark" : "light";
   }, [darkMode]);
 
   useEffect(() => {
@@ -218,54 +377,8 @@ export default function MediatorDashboard() {
     if (msg && msg !== lastProcessedMessageRef.current) {
       lastProcessedMessageRef.current = msg;
       console.log("WebSocket received:", msg);
-      
-      // Keep a local set of discharged IDs to prevent race conditions returning them in QUEUE_SYNC
-      if (!window.dischargedPatientsCache) {
-          window.dischargedPatientsCache = new Set<string>();
-      }
-
-      if (msg.type === "QUEUE_SYNC") {
-        const seen = new Set<string>();
-        const sessDocId = sessionInfo?.doctorId?.toString();
-        const deduped = (msg.patients || []).filter((p: any) => {
-          const key = p.patientId || p.id;
-          if (seen.has(key)) return false;
-          seen.add(key);
-          // Filter by this mediator's assigned doctor
-          if (sessDocId && p.doctorId?.toString() !== sessDocId) return false;
-          
-          // STRICT FIX: Filter out any patients that were locally discharged recently to prevent ghost reappearances
-          if (window.dischargedPatientsCache.has(key)) return false;
-          
-          return true;
-        }).map((p: any) => ({
-          ...p,
-          id: p.id || p.patientId
-        }));
-        setPatients(deduped);
-      } else if (msg.type === "DOCTOR_READY") {
-        setDoctorReady(true);
-      } else if (msg.type === "SHIFT_STARTED") {
-        const msgDocId = msg.doctorId?.toString();
-        const sessDocId = sessionInfo?.doctorId?.toString();
-        if (msgDocId && sessDocId && msgDocId !== sessDocId) {
-          console.log("Ignored SHIFT_STARTED event for another doctor:", msgDocId);
-          return;
-        }
-        setShiftStarted(true);
-        setDoctorReady(true);
-        setSessionFlash("Clinical Shift Launched: Dashboard Unlocked");
-        setTimeout(() => setSessionFlash(null), 4000);
-      } else if (msg.type === "SET_ACTIVE") {
-        setDoctorReady(false);
-      } else if (msg.type === "PATIENT_DISCHARGED") {
-        if (msg.patientId) window.dischargedPatientsCache?.add(String(msg.patientId));
-        setPatients(prev => prev.filter(p => 
-          String(p.id) !== String(msg.patientId) && 
-          String(p.patientId) !== String(msg.patientId) && 
-          String((p as any).appointmentId) !== String(msg.patientId)
-        ));
-      }
+      handleWebSocketMessage(msg, sessionInfo, setPatients, setDoctorReady, setShiftStarted, setSessionFlash);
+    }
     }
   }, [lastJsonMessage, lastMessage, sessionInfo]);
 
@@ -799,97 +912,21 @@ export default function MediatorDashboard() {
 
                 <div className="grid grid-cols-1 gap-4">
                   <AnimatePresence mode="popLayout">
-                    {section.list.map((p) => (
-                      <motion.div
+                    {section.list.map((p, pIdx) => (
+                      <PatientCard 
                         key={p.id}
-                        layout
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        className={`p-6 border group hover:scale-[1.005] transition-all duration-300 rounded-[32px] ${
-                          p.status === APP_STATUS.IN_SESSION ? 'border-rose-500 ring-4 ring-rose-500/20 bg-rose-500/5 shadow-2xl shadow-rose-500/10' : 
-                          p.tier === 'PREMIUM' ? 'border-amber-500/30 bg-amber-500/5' : `${borderCol} ${glassBg}`
-                        }`}
-                      >
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6">
-                          <div className="flex items-center gap-4 sm:gap-5 w-full sm:w-auto">
-                            <div className={`shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center font-black text-lg sm:text-xl shadow-inner ${
-                              p.status === APP_STATUS.IN_SESSION ? 'bg-rose-500 text-white shadow-rose-500/40' :
-                              p.tier === 'PREMIUM' ? 'bg-amber-500/20 text-amber-600' : 'bg-blue-500/20 text-blue-600'
-                            }`}>
-                              <span className="flex flex-col items-center justify-center text-center leading-tight">
-                                {p.tier === 'PREMIUM' ? (
-                                  <>
-                                    <Clock size={14} className="mb-0.5 sm:w-4 sm:h-4" />
-                                    <span className="text-[8px] sm:text-[10px] font-black">{p.appointmentTime || 'ELITE'}</span>
-                                  </>
-                                ) : (
-                                  <span className="text-lg sm:text-xl font-black italic">#{p.tokenNumber}</span>
-                                )}
-                              </span>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                 {section.title === "Arrived / Waiting" && section.list.indexOf(p) === 0 && (
-                                   <div className="mb-1 sm:mb-2 inline-flex items-center gap-1.5 px-2 py-0.5 sm:px-3 sm:py-1 rounded-md sm:rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                                     <Zap size={10} className="text-emerald-500 fill-current shrink-0" />
-                                     <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-emerald-400 whitespace-nowrap">Next Priority</span>
-                                   </div>
-                                 )}
-                                 <h4 className={`text-base sm:text-lg font-black tracking-tight leading-none ${textColor} truncate`}>{p.patientName || p.name}</h4>
-                                 {String(p.tier).toUpperCase() === 'PREMIUM' && (
-                                    <div className={`px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-500 text-[7px] sm:text-[8px] font-black uppercase tracking-widest border border-amber-500/20 flex items-center gap-1.5 shadow-sm mt-1 w-fit`}>
-                                     <Crown size={8} className="shrink-0" /> <span className="whitespace-nowrap">SLOT: {p.appointmentTime || 'ELITE'}</span>
-                                    </div>
-                                 )}
-                                 <div className="flex items-center gap-2 sm:gap-3 mt-1.5">
-                                  <span className={`text-[8px] sm:text-[9px] font-black uppercase tracking-widest whitespace-nowrap ${
-                                    p.status === APP_STATUS.ARRIVED || p.status === APP_STATUS.CHECKED_IN ? 'text-emerald-500' :
-                                    p.status === APP_STATUS.WAITING ? 'text-blue-500' :
-                                    p.status === APP_STATUS.IN_SESSION ? 'text-rose-400' : 'text-amber-500'
-                                  }`}>{p.status === APP_STATUS.CHECKED_IN ? 'CHECKED IN ✓' : p.status}</span>
-                                  <div className="w-1 h-1 rounded-full bg-slate-600 shrink-0" />
-                                  <div className="flex items-center gap-1 min-w-0">
-                                    {String(p.tier).toUpperCase() === 'PREMIUM' ? <Crown size={10} className="text-amber-500 shrink-0" /> : <Ticket size={10} className="text-blue-500 shrink-0" />}
-                                    <span className={`text-[8px] sm:text-[9px] font-black uppercase tracking-widest ${subTextColor} truncate`}>
-                                      {p.tier} <span className="hidden sm:inline">TIER</span> {String(p.tier).toUpperCase() === 'PREMIUM' && p.appointmentTime ? `• ${p.appointmentTime}` : ''}
-                                    </span>
-                                  </div>
-                                </div>
-                               </div>
-                            </div>
-                           <div className="flex flex-wrap items-center gap-2">
-                              {p.status !== APP_STATUS.IN_SESSION ? (
-                                <>
-                                  <button 
-                                    onClick={() => sendTurnSignal(p)} 
-                                    className="w-9 h-9 sm:w-10 sm:h-10 shrink-0 flex items-center justify-center rounded-lg sm:rounded-xl bg-emerald-500 text-white hover:bg-emerald-400 transition-all shadow-lg" 
-                                    title="SIGNAL PATIENT"
-                                  >
-                                    <BellRing size={14} className="sm:w-4 sm:h-4" />
-                                  </button>
-                                  {section.title !== "Late / Delayed" && (
-                                    <>
-                                      <button
-                                        onClick={() => prioritizePatient(p, "UP")}
-                                        className="w-9 h-9 sm:w-10 sm:h-10 shrink-0 flex items-center justify-center rounded-lg sm:rounded-xl bg-blue-600 text-white hover:bg-blue-500 transition-all shadow-lg"
-                                        title="Admit to Session Now"
-                                      >
-                                        <ArrowUp size={14} className="sm:w-4 sm:h-4" />
-                                      </button>
-                                      <button onClick={() => prioritizePatient(p, "DOWN")} className={`w-9 h-9 sm:w-10 sm:h-10 shrink-0 flex items-center justify-center rounded-lg sm:rounded-xl border ${darkMode ? 'bg-white/5 border-white/10 text-slate-300' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'} transition-all`} title="Move Down"><ArrowDown size={14} className="sm:w-4 sm:h-4" /></button>
-                                    </>
-                                  )}
-                                  <button onClick={() => handleCallPatient(p)} className="flex-1 sm:flex-none flex items-center justify-center gap-2 h-9 sm:h-10 px-4 sm:px-5 rounded-lg sm:rounded-xl bg-blue-600 text-white font-black text-[9px] uppercase tracking-widest hover:bg-blue-500 transition-all shadow-lg shadow-blue-500/20 shrink-0 min-w-[80px]"><Phone size={12} className="shrink-0" /> Call</button>
-                                </>
-                              ) : (
-                                <div className="px-4 py-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-[9px] font-black uppercase tracking-widest text-rose-400 flex items-center gap-2">
-                                  <Zap size={12} className="animate-pulse" />
-                                  Active Session
-                                </div>
-                              )}
-                           </div>
-                        </div>
-                      </motion.div>
+                        p={p}
+                        sectionTitle={section.title}
+                        isFirst={pIdx === 0}
+                        darkMode={darkMode}
+                        borderCol={borderCol}
+                        glassBg={glassBg}
+                        textColor={textColor}
+                        subTextColor={subTextColor}
+                        sendTurnSignal={sendTurnSignal}
+                        prioritizePatient={prioritizePatient}
+                        handleCallPatient={handleCallPatient}
+                      />
                     ))}
                   </AnimatePresence>
                 </div>

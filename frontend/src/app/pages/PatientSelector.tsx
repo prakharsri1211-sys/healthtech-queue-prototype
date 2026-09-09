@@ -33,6 +33,28 @@ interface Account {
   patients: Patient[];
 }
 
+const validatePatientForm = (form: PatientForm, account: Account | null, isUpdate: boolean = false) => {
+  if (!form.name.trim() || !form.age || !form.gender) {
+    return "Name, Age, and Gender are required.";
+  }
+  if (!form.aadharId && !form.abhaId && !form.udidCardNumber) {
+    return "At least one ID (Aadhar, ABHA, or UDID) is required.";
+  }
+  if (form.aadharId && !/^\d{12}$/.test(form.aadharId.replace(/\s/g, ""))) {
+    return "Aadhar must be exactly 12 digits.";
+  }
+  if (form.abhaId && form.abhaId.trim().length !== 14) {
+    return "ABHA Card number must be exactly 14 characters/digits.";
+  }
+  if (form.udidCardNumber && form.udidCardNumber.trim().length !== 18) {
+    return "UDID Card number must be exactly 18 characters/digits.";
+  }
+  if (!isUpdate && account && account.patients && account.patients.length >= 5) {
+    return "Account limit reached: maximum 5 family members allowed.";
+  }
+  return null;
+};
+
 export default function PatientSelector() {
   const api = (import.meta as any).env.VITE_API_URL || "https://online-queue-project.onrender.com";
   const navigate = useNavigate();
@@ -63,7 +85,7 @@ export default function PatientSelector() {
   };
 
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", darkMode ? "dark" : "light");
+    document.documentElement.dataset.theme = darkMode ? "dark" : "light";
   }, [darkMode]);
 
   const [loaded, setLoaded] = useState(false);
@@ -160,31 +182,12 @@ export default function PatientSelector() {
 
   const handleAddPatient = async () => {
     setError("");
-    if (!newPatientForm.name.trim() || !newPatientForm.age || !newPatientForm.gender) {
-      setError("Name, Age, and Gender are required.");
-      return;
-    }
-    if (!newPatientForm.aadharId && !newPatientForm.abhaId && !newPatientForm.udidCardNumber) {
-      setError("At least one ID (Aadhar, ABHA, or UDID) is required.");
-      return;
-    }
-    if (newPatientForm.aadharId && !/^\d{12}$/.test(newPatientForm.aadharId.replace(/\s/g, ""))) {
-      setError("Aadhar must be exactly 12 digits.");
-      return;
-    }
-    if (newPatientForm.abhaId && newPatientForm.abhaId.trim().length !== 14) {
-      setError("ABHA Card number must be exactly 14 characters/digits.");
-      return;
-    }
-    if (newPatientForm.udidCardNumber && newPatientForm.udidCardNumber.trim().length !== 18) {
-      setError("UDID Card number must be exactly 18 characters/digits.");
+    const validationError = validatePatientForm(newPatientForm, account, false);
+    if (validationError) {
+      setError(validationError);
       return;
     }
     if (!account) return;
-    if (account.patients && account.patients.length >= 5) {
-      setError("Account limit reached: maximum 5 family members allowed.");
-      return;
-    }
 
     setSaving(true);
 
@@ -253,24 +256,9 @@ export default function PatientSelector() {
   const handleUpdatePatient = async () => {
     if (!editingPatientId || !account) return;
     setError("");
-    if (!newPatientForm.name || !newPatientForm.age || !newPatientForm.gender) {
-      setError("Name, Age, and Gender are required.");
-      return;
-    }
-    if (!newPatientForm.aadharId && !newPatientForm.abhaId && !newPatientForm.udidCardNumber) {
-      setError("At least one ID (Aadhar, ABHA, or UDID) is required.");
-      return;
-    }
-    if (newPatientForm.aadharId && !/^\d{12}$/.test(newPatientForm.aadharId.replace(/\s/g, ""))) {
-      setError("Aadhar must be exactly 12 digits.");
-      return;
-    }
-    if (newPatientForm.abhaId && newPatientForm.abhaId.trim().length !== 14) {
-      setError("ABHA Card number must be exactly 14 characters/digits.");
-      return;
-    }
-    if (newPatientForm.udidCardNumber && newPatientForm.udidCardNumber.trim().length !== 18) {
-      setError("UDID Card number must be exactly 18 characters/digits.");
+    const validationError = validatePatientForm(newPatientForm, account, true);
+    if (validationError) {
+      setError(validationError);
       return;
     }
     setSaving(true);
