@@ -70,7 +70,7 @@ async function main() {
     
     // Step 2: Get all patient profiles under this account
     console.log('\nStep 2: Fetching patient profiles...');
-    const patientsRes = await apiCall('GET', `/api/patient/account/${accountId}`, null, token);
+    const patientsRes = await apiCall('GET', `/api/patient/account/${encodeURIComponent(accountId)}`, null, token);
     console.log(`Found ${Array.isArray(patientsRes.body) ? patientsRes.body.length : 0} patients`);
     
     if (Array.isArray(patientsRes.body)) {
@@ -78,16 +78,16 @@ async function main() {
             console.log(`\n  Deleting patient: ${patient.name} (ID: ${patient.id})`);
             
             // Delete appointments for this patient
-            const apptsRes = await apiCall('GET', `/api/appointments/patient/${patient.id}`, null, token);
+            const apptsRes = await apiCall('GET', `/api/appointments/patient/${encodeURIComponent(patient.id)}`, null, token);
             if (Array.isArray(apptsRes.body)) {
                 for (const appt of apptsRes.body) {
                     console.log(`    Cancelling appointment: ${appt.id}`);
-                    await apiCall('PUT', `/api/appointments/${appt.id}/status`, { status: 'CANCELLED' }, token);
+                    await apiCall('PUT', `/api/appointments/${encodeURIComponent(appt.id)}/status`, { status: 'CANCELLED' }, token);
                 }
             }
             
             // Delete the patient profile
-            const delRes = await apiCall('DELETE', `/api/patient/${patient.id}`, null, token);
+            const delRes = await apiCall('DELETE', `/api/patient/${encodeURIComponent(patient.id)}`, null, token);
             console.log(`    Delete result: ${delRes.status}`);
         }
     }

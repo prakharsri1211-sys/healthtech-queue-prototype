@@ -1,4 +1,4 @@
-﻿{
+{
     "message":  "Database seeded successfully with 3 Doctors, 2 Mediators, 5 Patients!",
     "doctors":  [
                     {
@@ -23,21 +23,21 @@
                                "accountId":  26,
                                "name":  "Dr. Rajesh Kumar",
                                "username":  "doctor1",
-                               "password":  "password123"
+                               "initial_pwd":  "password123"
                            },
                            {
                                "doctorId":  8,
                                "accountId":  27,
                                "name":  "Dr. Priya Sharma",
                                "username":  "doctor2",
-                               "password":  "password123"
+                               "initial_pwd":  "password123"
                            },
                            {
                                "doctorId":  9,
                                "accountId":  28,
                                "name":  "Dr. Anil Mehta",
                                "username":  "doctor3",
-                               "password":  "password123"
+                               "initial_pwd":  "password123"
                            }
                        ],
     "mediators":  [
@@ -60,14 +60,14 @@
                                  "accountId":  29,
                                  "name":  "Sunita Verma",
                                  "username":  "mediator1",
-                                 "password":  "med1234"
+                                 "initial_pwd":  "med1234"
                              },
                              {
                                  "mediatorId":  6,
                                  "accountId":  30,
                                  "name":  "Ravi Patel",
                                  "username":  "mediator2",
-                                 "password":  "med1234"
+                                 "initial_pwd":  "med1234"
                              }
                          ],
     "patients":  [
@@ -76,7 +76,7 @@
                          "accountId":  21,
                          "name":  "Amit Sharma",
                          "username":  "patient1",
-                         "password":  "pass1234",
+                         "initial_pwd":  "pass1234",
                          "phone":  "9100000001",
                          "aadhar":  "111122223333",
                          "abhaId":  "ABHA-2024-001"
@@ -86,7 +86,7 @@
                          "accountId":  22,
                          "name":  "Neha Gupta",
                          "username":  "patient2",
-                         "password":  "pass1234",
+                         "initial_pwd":  "pass1234",
                          "phone":  "9100000002",
                          "aadhar":  "222233334444",
                          "abhaId":  "ABHA-2024-002"
@@ -96,7 +96,7 @@
                          "accountId":  23,
                          "name":  "Ravi Singh",
                          "username":  "patient3",
-                         "password":  "pass1234",
+                         "initial_pwd":  "pass1234",
                          "phone":  "9100000003",
                          "aadhar":  "333344445555",
                          "abhaId":  "ABHA-2024-003"
@@ -106,7 +106,7 @@
                          "accountId":  24,
                          "name":  "Pooja Reddy",
                          "username":  "patient4",
-                         "password":  "pass1234",
+                         "initial_pwd":  "pass1234",
                          "phone":  "9100000004",
                          "aadhar":  "444455556666",
                          "abhaId":  "ABHA-2024-004"
@@ -116,7 +116,7 @@
                          "accountId":  25,
                          "name":  "Kiran Das",
                          "username":  "patient5",
-                         "password":  "pass1234",
+                         "initial_pwd":  "pass1234",
                          "phone":  "9100000005",
                          "aadhar":  "555566667777",
                          "abhaId":  "ABHA-2024-005"

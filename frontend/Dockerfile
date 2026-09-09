@@ -6,7 +6,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies securely without running lifecycle scripts
-RUN npm install --ignore-scripts
+RUN npm ci --ignore-scripts
 
 # Copy the rest of the code
 COPY . .
