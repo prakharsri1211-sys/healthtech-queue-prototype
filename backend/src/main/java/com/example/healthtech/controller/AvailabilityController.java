@@ -147,6 +147,16 @@ public class AvailabilityController {
                         }
                     }
                 }
+                
+                // Fetch for resolved actualAccountId if different
+                if (actualAccountId != null && !actualAccountId.equals(doctorId)) {
+                    java.util.List<Availability> accAvail = availabilityRepository.findByDoctorId(actualAccountId);
+                    for (Availability a : accAvail) {
+                        if (combined.stream().noneMatch(existing -> existing.getDate().equals(a.getDate()))) {
+                            combined.add(a);
+                        }
+                    }
+                }
             } catch (Exception e) {
                 System.err.println("Error resolving doctor ID: " + e.getMessage());
             }

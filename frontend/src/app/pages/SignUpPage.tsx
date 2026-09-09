@@ -45,7 +45,7 @@ export default function SignUpPage(): React.JSX.Element {
         if (parts.length >= 2) {
             const lat = parts[0].trim();
             const lng = parts[1].trim();
-            if (!isNaN(Number(lat)) && !isNaN(Number(lng))) {
+            if (!Number.isNaN(Number(lat)) && !Number.isNaN(Number(lng))) {
                 e.preventDefault();
                 setFormData((prev) => ({
                     ...prev,
@@ -75,7 +75,7 @@ export default function SignUpPage(): React.JSX.Element {
             return;
         }
 
-        if (role === "patient" && (!formData.age || isNaN(Number(formData.age)) || Number(formData.age) <= 0)) {
+        if (role === "patient" && (!formData.age || Number.isNaN(Number(formData.age)) || Number(formData.age) <= 0)) {
             setError("Please enter a valid age");
             setIsLoading(false);
             return;
@@ -246,10 +246,11 @@ export default function SignUpPage(): React.JSX.Element {
                     <form onSubmit={handleSignUp} className="space-y-6" autoComplete="off">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Legal Name</label>
+                                <label htmlFor="fullName" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Legal Name</label>
                                 <div className="relative group">
                                     <User size={18} className={`absolute left-4 top-1/2 -translate-y-1/2 text-${config.color}-500`} />
                                     <input
+                                        id="fullName"
                                         type="text"
                                         name="fullName"
                                         placeholder="Full Name"
@@ -262,10 +263,11 @@ export default function SignUpPage(): React.JSX.Element {
                                 </div>
                             </div>
                              <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Username (Login ID)</label>
+                                <label htmlFor="username" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Username (Login ID)</label>
                                 <div className="relative group">
                                     <User size={18} className={`absolute left-4 top-1/2 -translate-y-1/2 text-${config.color}-500`} />
                                     <input
+                                        id="username"
                                         type="text"
                                         name="username"
                                         placeholder="Choose a username"
@@ -281,12 +283,12 @@ export default function SignUpPage(): React.JSX.Element {
 
                         <div className="space-y-2">
                             <div className="flex justify-between items-center px-1">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Identity Token (Private Key)</label>
+                                <label htmlFor="identityToken" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Identity Token (Private Key)</label>
                                 <button 
                                     type="button"
                                     onClick={() => {
                                         const base = formData.fullName.split(' ')[0].toLowerCase() || "user";
-                                        const rand = Math.floor(100 + Math.random() * 899);
+                                        const rand = 100 + (window.crypto.getRandomValues(new Uint32Array(1))[0] % 899);
                                         const ageStr = formData.age ? `_${formData.age}` : "";
                                         setFormData(prev => ({ ...prev, identityToken: `${base}${ageStr}_${rand}` }));
                                     }}
@@ -298,6 +300,7 @@ export default function SignUpPage(): React.JSX.Element {
                             <div className="relative group">
                                 <Fingerprint size={18} className={`absolute left-4 top-1/2 -translate-y-1/2 text-${config.color}-500`} />
                                 <input
+                                    id="identityToken"
                                     type="text"
                                     name="identityToken"
                                     placeholder="e.g. @your_name_123"
@@ -315,7 +318,7 @@ export default function SignUpPage(): React.JSX.Element {
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Contact Protocol</label>
+                                <label htmlFor="phone" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Contact Protocol</label>
                                 <div className="flex bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden focus-within:border-slate-400 transition-all">
                                     <div className="flex items-center px-3 bg-slate-100 border-r border-slate-200">
                                         <select className="bg-transparent text-slate-600 text-sm font-bold outline-none cursor-pointer pr-1 appearance-none">
@@ -327,6 +330,7 @@ export default function SignUpPage(): React.JSX.Element {
                                     <div className="relative flex-1 group">
                                         <Phone size={18} className={`absolute left-3 top-1/2 -translate-y-1/2 text-${config.color}-500`} />
                                         <input
+                                            id="phone"
                                             type="tel"
                                             name="phone"
                                             placeholder=""
@@ -344,10 +348,11 @@ export default function SignUpPage(): React.JSX.Element {
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Credential</label>
+                                <label htmlFor="password" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Credential</label>
                                 <div className="relative group">
                                     <Lock size={18} className={`absolute left-4 top-1/2 -translate-y-1/2 text-${config.color}-500`} />
                                     <input
+                                        id="password"
                                         type={showPassword ? "text" : "password"}
                                         name="password"
                                         placeholder="••••••••"
@@ -369,10 +374,11 @@ export default function SignUpPage(): React.JSX.Element {
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Verify Credential</label>
+                            <label htmlFor="confirmPassword" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Verify Credential</label>
                             <div className="relative group">
                                 <Lock size={18} className={`absolute left-4 top-1/2 -translate-y-1/2 text-${config.color}-500`} />
                                 <input
+                                    id="confirmPassword"
                                     type={showPassword ? "text" : "password"}
                                     name="confirmPassword"
                                     placeholder="••••••••"
@@ -389,10 +395,11 @@ export default function SignUpPage(): React.JSX.Element {
                         {(role === "doctor") && (
                             <div className="space-y-6">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Practice Unit</label>
+                                    <label htmlFor="clinicName" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Practice Unit</label>
                                     <div className="relative group">
                                         <MapPin size={18} className={`absolute left-4 top-1/2 -translate-y-1/2 text-${config.color}-500`} />
                                         <input
+                                            id="clinicName"
                                             type="text"
                                             name="clinicName"
                                             placeholder="Clinic / Hospital Name"
@@ -405,6 +412,7 @@ export default function SignUpPage(): React.JSX.Element {
                                     <div className="relative group">
                                         <MapPin size={18} className={`absolute left-4 top-1/2 -translate-y-1/2 text-${config.color}-500`} />
                                         <input
+                                            id="clinicAddress"
                                             type="text"
                                             name="clinicAddress"
                                             placeholder="Clinic Full Address"
@@ -417,8 +425,9 @@ export default function SignUpPage(): React.JSX.Element {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Medical Specialty</label>
+                                    <label htmlFor="speciality" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Medical Specialty</label>
                                     <input
+                                        id="speciality"
                                         list="specialties"
                                         name="speciality"
                                         placeholder="Type or select a specialty..."
@@ -483,8 +492,9 @@ export default function SignUpPage(): React.JSX.Element {
                         {role === "patient" && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-[#94A3B8] ml-1">Patient Age</label>
+                                    <label htmlFor="patientAge" className="text-[10px] font-black uppercase tracking-widest text-[#94A3B8] ml-1">Patient Age</label>
                                     <input
+                                        id="patientAge"
                                         type="number"
                                         name="age"
                                         placeholder="Years"
@@ -495,8 +505,9 @@ export default function SignUpPage(): React.JSX.Element {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-[#94A3B8] ml-1">Sex</label>
+                                    <label htmlFor="patientGender" className="text-[10px] font-black uppercase tracking-widest text-[#94A3B8] ml-1">Sex</label>
                                     <select
+                                        id="patientGender"
                                         name="gender"
                                         required
                                         value={formData.gender}
@@ -527,7 +538,9 @@ export default function SignUpPage(): React.JSX.Element {
                             </div>
                             <div className="px-2 py-2">
                                 <div className="relative">
+                                    <label htmlFor="aadharId" className="sr-only">Aadhar Identity</label>
                                     <input
+                                        id="aadharId"
                                         type="password"
                                         name="aadharId"
                                         maxLength={12}

@@ -31,6 +31,7 @@ public class AppointmentController {
     private final com.example.healthtech.config.DashboardWebSocketHandler webSocketHandler;
     private final com.example.healthtech.repository.mongodb.LiveQueueRepository liveQueueRepository;
     private final com.example.healthtech.service.QueueService queueService;
+    private final com.example.healthtech.service.PincodeGeocodingService pincodeGeocodingService;
 
     public AppointmentController(AppointmentService appointmentService, WaitTimeService waitTimeService,
             com.example.healthtech.repository.jpa.AvailabilityRepository availabilityRepository,
@@ -40,7 +41,8 @@ public class AppointmentController {
             com.example.healthtech.repository.mongodb.AppointmentRepository appointmentRepository,
             com.example.healthtech.config.DashboardWebSocketHandler webSocketHandler,
             com.example.healthtech.repository.mongodb.LiveQueueRepository liveQueueRepository,
-            com.example.healthtech.service.QueueService queueService) {
+            com.example.healthtech.service.QueueService queueService,
+            com.example.healthtech.service.PincodeGeocodingService pincodeGeocodingService) {
         this.appointmentService = appointmentService;
         this.waitTimeService = waitTimeService;
         this.availabilityRepository = availabilityRepository;
@@ -51,6 +53,7 @@ public class AppointmentController {
         this.webSocketHandler = webSocketHandler;
         this.liveQueueRepository = liveQueueRepository;
         this.queueService = queueService;
+        this.pincodeGeocodingService = pincodeGeocodingService;
     }
 
     @GetMapping("/preview")
@@ -489,8 +492,21 @@ public class AppointmentController {
         
         // 1. Fetch clinic coordinates from DB
         com.example.healthtech.model.Doctor d = doctorRepository.findById(doctorId).orElse(null);
-        double clinicLat = (d != null && d.getLatitude() != null) ? d.getLatitude() : 26.8467;
-        double clinicLng = (d != null && d.getLongitude() != null) ? d.getLongitude() : 80.9462;
+        double clinicLat = 26.8467;
+        double clinicLng = 80.9462;
+        
+        if (d != null) {
+            if (d.getLatitude() != null && d.getLongitude() != null) {
+                clinicLat = d.getLatitude();
+                clinicLng = d.getLongitude();
+            } else if (d.getPincode() != null && !d.getPincode().isEmpty()) {
+                double[] coords = pincodeGeocodingService.getCoordinatesForPincode(d.getPincode());
+                if (coords != null) {
+                    clinicLat = coords[0];
+                    clinicLng = coords[1];
+                }
+            }
+        }
 
         // 2. Calculate travel time
         com.example.healthtech.service.LocationUtility locationUtility = new com.example.healthtech.service.LocationUtility();

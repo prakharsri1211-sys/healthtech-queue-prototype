@@ -77,6 +77,11 @@ export default function DeveloperMenu() {
       {/* Overlay */}
       {isOpen && (
         <div
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') setIsOpen(false);
+          }}
           className="absolute inset-0 bg-black/30 -z-10"
           onClick={() => setIsOpen(false)}
           style={{ left: "-100vw" }}

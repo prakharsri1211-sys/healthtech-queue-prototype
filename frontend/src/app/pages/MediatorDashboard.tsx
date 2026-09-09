@@ -548,7 +548,7 @@ export default function MediatorDashboard() {
     let d = new Date();
     const cleanStr = timeStr.trim();
     let [h, m] = cleanStr.split(":").map(Number);
-    if (!isNaN(h) && !isNaN(m)) {
+    if (!Number.isNaN(h) && !Number.isNaN(m)) {
       d.setHours(h, m, 0, 0);
     }
     return d.getTime();

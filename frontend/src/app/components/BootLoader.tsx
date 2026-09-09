@@ -23,7 +23,7 @@ export const BootLoader = ({ onReady }: { onReady: () => void }) => {
   // 2. Fake progress bar
   useEffect(() => {
     const progressInterval = setInterval(() => {
-      setProgress((prev) => (prev < 95 ? prev + Math.floor(Math.random() * 5) + 1 : prev));
+      setProgress((prev) => (prev < 95 ? prev + (window.crypto.getRandomValues(new Uint32Array(1))[0] % 5) + 1 : prev));
     }, 800);
     return () => clearInterval(progressInterval);
   }, []);

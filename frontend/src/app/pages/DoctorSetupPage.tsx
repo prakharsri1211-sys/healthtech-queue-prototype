@@ -62,10 +62,13 @@ export default function DoctorSetupPage(): React.JSX.Element {
                         { key: "admit", label: "Admit Department", icon: <Home size={20} /> },
                         { key: "pharmacy", label: "Pharmacy Unit", icon: <ShoppingBag size={20} /> },
                     ].map((item) => (
-                        <div
+                        <button
+                            type="button"
                             key={item.key}
                             onClick={() => handleToggle(item.key as any)}
                             style={{
+                                width: "100%",
+                                textAlign: "left",
                                 backgroundColor: colors.cardBg,
                                 borderRadius: "20px",
                                 padding: "20px",
@@ -102,7 +105,7 @@ export default function DoctorSetupPage(): React.JSX.Element {
                                     transition: "left 0.2s"
                                 }} />
                             </div>
-                        </div>
+                        </button>
                     ))}
                 </div>
 

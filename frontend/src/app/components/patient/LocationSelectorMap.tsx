@@ -114,8 +114,8 @@ export const LocationSelectorMap: React.FC<LocationSelectorMapProps> = ({
 
       if (data && data.length > 0) {
         const newPos = { 
-          lat: parseFloat(data[0].lat), 
-          lng: parseFloat(data[0].lon) 
+          lat: Number.parseFloat(data[0].lat), 
+          lng: Number.parseFloat(data[0].lon) 
         };
         setPosition(newPos);
         onLocationSelected(newPos);

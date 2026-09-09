@@ -1,6 +1,8 @@
 const { MongoClient } = require('mongodb');
+const crypto = require('crypto');
 
-const uri = "mongodb+srv://prakharsri1211:HgAljHPvLIVMNTQC@cluster0.om6tryd.mongodb.net/healthtech?retryWrites=true&w=majority&appName=Cluster0";
+// Use environment variable for MongoDB URI to avoid hardcoded credentials
+const uri = process.env.MONGO_URI || "mongodb://localhost:27017/healthtech";
 const client = new MongoClient(uri);
 
 async function run() {
@@ -17,8 +19,8 @@ async function run() {
 
     for (let p of patients) {
       if (!p.aadharOrAbhaId || p.aadharOrAbhaId.trim() === '' || seen.has(p.aadharOrAbhaId)) {
-        // Assign a dummy unique ID
-        const dummyId = "dummy-" + Math.random().toString(36).substring(2, 12);
+        // Assign a dummy unique ID using a cryptographically secure random generator
+        const dummyId = "dummy-" + crypto.randomBytes(5).toString('hex');
         console.log(`Updating patient ${p._id} (${p.name}) with dummy Aadhar: ${dummyId}`);
         await collection.updateOne(
           { _id: p._id },

@@ -132,7 +132,7 @@ public class AppointmentService {
                     if (t.isBefore(avail.getStartTime()) || t.isAfter(avail.getEndTime().minusMinutes(1))) {
                         throw new IllegalStateException("Selected time is outside doctor clinical hours");
                     }
-                } catch (Exception e) {
+                } catch (RuntimeException e) {
                    // Ignore parsing errors for walk-ins or malformed slots, defer to taken check below
                 }
             }

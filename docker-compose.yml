@@ -3,7 +3,7 @@ services:
     build: ./frontend
     container_name: healthtech-frontend
     ports:
-      - "5173:80"
+      - "5173:8080"
     environment:
       - VITE_API_URL=${VITE_API_URL}
     depends_on:

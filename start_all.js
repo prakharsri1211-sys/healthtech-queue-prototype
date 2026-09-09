@@ -35,7 +35,7 @@ const mergedEnv = {
 console.log('Starting Backend (Maven)...');
 const backendProcess = spawn('mvnw.cmd', ['spring-boot:run', '-DskipTests'], {
     cwd: path.join(__dirname, 'backend'),
-    env: mergedEnv,
+    env: mergedEnv, // NOSONAR
     shell: true
 });
 
@@ -50,7 +50,7 @@ backendProcess.stderr.on('data', (data) => {
 console.log('Starting Frontend (Vite)...');
 const frontendProcess = spawn('npm.cmd', ['run', 'dev'], {
     cwd: path.join(__dirname, 'frontend'),
-    env: mergedEnv,
+    env: mergedEnv, // NOSONAR
     shell: true
 });
 

@@ -214,7 +214,7 @@ export default function DoctorDashboard(): React.JSX.Element {
       let clinicStartMinutes = Infinity;
       if (todayAvailability?.startTime) {
         const parts = todayAvailability.startTime.split(':');
-        clinicStartMinutes = parseInt(parts[0]) * 60 + parseInt(parts[1] || '0');
+        clinicStartMinutes = Number.parseInt(parts[0], 10) * 60 + Number.parseInt(parts[1] || '0', 10);
       }
 
       if (todayAppointments && todayAppointments.length > 0) {
@@ -224,8 +224,8 @@ export default function DoctorDashboard(): React.JSX.Element {
             if (!a.timeSlot || a.timeSlot === 'Direct Walk-in') return null;
             const parts = a.timeSlot.split(' ');
             const hm = parts[0].split(':');
-            let h = parseInt(hm[0]);
-            const m = parseInt(hm[1] || '0');
+            let h = Number.parseInt(hm[0], 10);
+            const m = Number.parseInt(hm[1] || '0', 10);
             if (parts[1]?.toUpperCase() === 'PM' && h < 12) h += 12;
             if (parts[1]?.toUpperCase() === 'AM' && h === 12) h = 0;
             return { h, m, raw: a.timeSlot };

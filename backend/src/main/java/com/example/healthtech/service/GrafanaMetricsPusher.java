@@ -137,7 +137,7 @@ public class GrafanaMetricsPusher {
             
             // Step 4: Create auth header
             String credentials = grafanaUser + ":" + grafanaToken;
-            String encodedCredentials = Base64.getEncoder().encodeToString(credentials.getBytes());
+            String encodedCredentials = Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
             
             HttpHeaders headers = new HttpHeaders();
             headers.set("Content-Type", "application/x-protobuf");
@@ -252,7 +252,7 @@ public class GrafanaMetricsPusher {
                 
                 requestBuilder.addTimeseries(tsBuilder.build());
                 
-            } catch (Exception e) {
+            } catch (RuntimeException e) {
                 // Ignore parse errors for individual lines (e.g. invalid numbers) and continue
             }
         }

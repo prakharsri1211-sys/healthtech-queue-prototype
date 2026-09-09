@@ -45,22 +45,24 @@ export const ClinicLocationSetup = () => {
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700">Latitude</label>
+          <label htmlFor="latitude" className="block text-sm font-medium text-gray-700">Latitude</label>
           <input 
+            id="latitude"
             type="number" 
             value={latitude} 
-            onChange={(e) => setLatitude(parseFloat(e.target.value))}
+            onChange={(e) => setLatitude(Number.parseFloat(e.target.value))}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border"
             placeholder="e.g. 26.8467"
             step="any"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700">Longitude</label>
+          <label htmlFor="longitude" className="block text-sm font-medium text-gray-700">Longitude</label>
           <input 
+            id="longitude"
             type="number" 
             value={longitude} 
-            onChange={(e) => setLongitude(parseFloat(e.target.value))}
+            onChange={(e) => setLongitude(Number.parseFloat(e.target.value))}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border"
             placeholder="e.g. 80.9462"
             step="any"

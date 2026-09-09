@@ -149,12 +149,19 @@ export default function DoctorOnboarding(): React.JSX.Element {
                     >
                         <div className="flex items-center gap-3">
                             <AlertCircle size={20} className="shrink-0" />
-                            <span 
-                                className={`font-bold text-sm ${launchError.includes("assign staff") ? "cursor-pointer underline hover:text-white transition-colors" : ""}`}
-                                onClick={() => launchError.includes("assign staff") && navigate("/doctor/manage-staff")}
-                            >
-                                {launchError}
-                            </span>
+                            {launchError.includes("assign staff") ? (
+                                <button
+                                    type="button"
+                                    className="font-bold text-sm cursor-pointer underline hover:text-white transition-colors bg-transparent border-none p-0 inline text-inherit font-inherit text-left"
+                                    onClick={() => navigate("/doctor/manage-staff")}
+                                >
+                                    {launchError}
+                                </button>
+                            ) : (
+                                <span className="font-bold text-sm">
+                                    {launchError}
+                                </span>
+                            )}
                         </div>
                         {launchError.includes("Mediator not assigned") && (
                             <button 

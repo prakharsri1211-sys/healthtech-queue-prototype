@@ -20,7 +20,7 @@ const loginReq = http.request(
         let str = '';
         res.on('data', chunk => str += chunk);
         res.on('end', () => {
-            console.log('Login:', res.statusCode, str);
+            console.log('Login status:', res.statusCode);
             const token = JSON.parse(str).token;
 
             const availData = JSON.stringify({
@@ -47,7 +47,7 @@ const loginReq = http.request(
                 resA => {
                     let strA = '';
                     resA.on('data', chunk => strA += chunk);
-                    resA.on('end', () => console.log('Avail:', resA.statusCode, strA));
+                    resA.on('end', () => console.log('Avail status:', resA.statusCode));
                 }
             );
             availReq.write(availData);

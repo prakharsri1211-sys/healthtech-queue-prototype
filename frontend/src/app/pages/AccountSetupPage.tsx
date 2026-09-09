@@ -75,8 +75,9 @@ export default function AccountSetupPage(): React.JSX.Element {
                             
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Account Holder Name</label>
+                                    <label htmlFor="bankAccountName" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Account Holder Name</label>
                                     <input
+                                        id="bankAccountName"
                                         type="text"
                                         name="bankAccountName"
                                         required
@@ -87,8 +88,9 @@ export default function AccountSetupPage(): React.JSX.Element {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">IFSC Code</label>
+                                    <label htmlFor="ifscCode" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">IFSC Code</label>
                                     <input
+                                        id="ifscCode"
                                         type="text"
                                         name="ifscCode"
                                         required
@@ -101,8 +103,9 @@ export default function AccountSetupPage(): React.JSX.Element {
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Account Number</label>
+                                <label htmlFor="bankAccountNumber" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Account Number</label>
                                 <input
+                                    id="bankAccountNumber"
                                     type="password"
                                     name="bankAccountNumber"
                                     required
@@ -122,8 +125,9 @@ export default function AccountSetupPage(): React.JSX.Element {
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Practice Unit Address</label>
+                                <label htmlFor="clinicAddress" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Practice Unit Address</label>
                                 <input
+                                    id="clinicAddress"
                                     type="text"
                                     name="clinicAddress"
                                     required
@@ -136,8 +140,9 @@ export default function AccountSetupPage(): React.JSX.Element {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Pincode</label>
+                                    <label htmlFor="pincode" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Pincode</label>
                                     <input
+                                        id="pincode"
                                         type="text"
                                         name="pincode"
                                         required
@@ -148,8 +153,9 @@ export default function AccountSetupPage(): React.JSX.Element {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Emergency Service Phone</label>
+                                    <label htmlFor="emergencyContact" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Emergency Service Phone</label>
                                     <input
+                                        id="emergencyContact"
                                         type="tel"
                                         name="emergencyContact"
                                         required

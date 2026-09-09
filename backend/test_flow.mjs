@@ -6,10 +6,10 @@ async function runTest() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username: 'abc1234', password: 'password123' })
   });
-  console.log('User:', await res.text());
+  console.log('User login status:', res.status);
   
   res = await fetch(`${api}/api/specialties/Oncology/doctors`);
-  console.log('Docs:', await res.text());
+  console.log('Docs fetch status:', res.status);
 }
 
 runTest().catch(console.error);

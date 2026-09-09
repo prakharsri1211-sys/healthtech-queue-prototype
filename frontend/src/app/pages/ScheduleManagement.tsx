@@ -393,7 +393,7 @@ export default function ScheduleManagement(): React.JSX.Element {
                     </div>
 
                     <div className="flex justify-between items-center">
-                       <label className="text-xs font-black uppercase tracking-widest">Operational Status</label>
+                       <label htmlFor="operational-status-toggle" className="text-xs font-black uppercase tracking-widest">Operational Status</label>
                        <button
                          id="operational-status-toggle"
                          onClick={() => !isPastSelected && updateField("isOpen", !dayConfig.isOpen)}
@@ -408,8 +408,9 @@ export default function ScheduleManagement(): React.JSX.Element {
                        <label className="text-xs font-black uppercase tracking-widest text-slate-500">Clinical Hours</label>
                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="space-y-2">
-                             <span className="text-[10px] font-black uppercase text-slate-600">Start</span>
+                             <label htmlFor="clinicalStart" className="block text-[10px] font-black uppercase text-slate-600">Start</label>
                              <input
+                               id="clinicalStart"
                                type="time"
                                value={dayConfig.startTime}
                                onChange={e => updateField("startTime", e.target.value)}
@@ -418,8 +419,9 @@ export default function ScheduleManagement(): React.JSX.Element {
                              />
                           </div>
                           <div className="space-y-2">
-                             <span className="text-[10px] font-black uppercase text-slate-600">End</span>
+                             <label htmlFor="clinicalEnd" className="block text-[10px] font-black uppercase text-slate-600">End</label>
                              <input
+                               id="clinicalEnd"
                                type="time"
                                value={dayConfig.endTime}
                                onChange={e => updateField("endTime", e.target.value)}
@@ -436,13 +438,14 @@ export default function ScheduleManagement(): React.JSX.Element {
                          <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20">
                            <div className="flex items-center gap-2 mb-2">
                              <Crown size={14} className="text-amber-500" />
-                             <span className="text-[10px] font-black uppercase text-amber-500">Premium Slots</span>
+                             <label htmlFor="premiumSlots" className="text-[10px] font-black uppercase text-amber-500">Premium Slots</label>
                            </div>
                            <input
+                             id="premiumSlots"
                              type="number"
                              min="0"
                              value={dayConfig.premiumCapacity}
-                             onChange={e => updateField("premiumCapacity", parseInt(e.target.value) || 0, false)}
+                             onChange={e => updateField("premiumCapacity", Number.parseInt(e.target.value, 10) || 0, false)}
                              onBlur={() => setPendingSave(true)}
                              className="w-full bg-black/20 border border-amber-500/20 rounded-xl py-2 px-4 text-white font-black outline-none"
                            />
@@ -450,13 +453,14 @@ export default function ScheduleManagement(): React.JSX.Element {
                          <div className="p-4 rounded-2xl bg-slate-500/10 border border-white/5">
                            <div className="flex items-center gap-2 mb-2">
                              <Users size={14} className="text-slate-400" />
-                             <span className="text-[10px] font-black uppercase text-slate-400">Standard Slots</span>
+                             <label htmlFor="standardSlots" className="text-[10px] font-black uppercase text-slate-400">Standard Slots</label>
                            </div>
                            <input
+                             id="standardSlots"
                              type="number"
                              min="0"
                              value={dayConfig.standardCapacity}
-                             onChange={e => updateField("standardCapacity", parseInt(e.target.value) || 0, false)}
+                             onChange={e => updateField("standardCapacity", Number.parseInt(e.target.value, 10) || 0, false)}
                              onBlur={() => setPendingSave(true)}
                              className="w-full bg-black/20 border border-white/10 rounded-xl py-2 px-4 text-white font-black outline-none"
                            />

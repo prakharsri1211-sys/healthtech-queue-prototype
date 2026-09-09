@@ -13,14 +13,11 @@ function apiCall(method, path, body, token) {
         if (token) headers['Authorization'] = `Bearer ${token}`;
         
         const options = {
-            hostname: url.hostname,
-            port: url.port || 8080,
-            path: url.pathname + url.search,
             method: method,
             headers: headers
         };
         
-        const req = http.request(options, (res) => {
+        const req = http.request(url, options, (res) => {
             let data = '';
             res.on('data', chunk => data += chunk);
             res.on('end', () => {
@@ -50,12 +47,12 @@ async function main() {
     });
     
     if (loginRes.status !== 200) {
-        console.log('Login response:', JSON.stringify(loginRes.body));
+        console.log('Login response status:', loginRes.status);
         console.log('\nTrying to find abc123 account via seed status...');
         
         // Try seed status to see what exists
         const statusRes = await apiCall('GET', '/api/seed/status');
-        console.log('Seed status:', JSON.stringify(statusRes.body));
+        console.log('Seed status code:', statusRes.status);
         
         // If abc123 login failed, the account might already be purged on the remote.
         // The patient profiles shown in the UI might be cached in localStorage.

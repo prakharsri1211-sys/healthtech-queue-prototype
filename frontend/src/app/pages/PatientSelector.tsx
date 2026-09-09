@@ -191,7 +191,7 @@ export default function PatientSelector() {
     const newPatient: Patient = {
       id: `local_${Date.now()}`,
       name: newPatientForm.name,
-      age: parseInt(newPatientForm.age),
+      age: Number.parseInt(newPatientForm.age, 10),
       gender: newPatientForm.gender,
       aadharId: newPatientForm.aadharId,
       abhaId: newPatientForm.abhaId,
@@ -214,7 +214,7 @@ export default function PatientSelector() {
         body: JSON.stringify({
           accountId: account.id,
           name: newPatientForm.name,
-          age: parseInt(newPatientForm.age),
+          age: Number.parseInt(newPatientForm.age, 10),
           gender: newPatientForm.gender,
           aadharOrAbhaId: newPatientForm.aadharId || newPatientForm.abhaId || newPatientForm.udidCardNumber,
           identityType: newPatientForm.aadharId ? "AADHAR" : newPatientForm.abhaId ? "ABHA" : "HANDICAPPED",
@@ -278,7 +278,7 @@ export default function PatientSelector() {
     const updatedPatient: Patient = {
       id: editingPatientId,
       name: newPatientForm.name,
-      age: parseInt(newPatientForm.age),
+      age: Number.parseInt(newPatientForm.age, 10),
       gender: newPatientForm.gender,
       aadharId: newPatientForm.aadharId,
       abhaId: newPatientForm.abhaId,
@@ -300,7 +300,7 @@ export default function PatientSelector() {
           },
           body: JSON.stringify({
             name: newPatientForm.name,
-            age: parseInt(newPatientForm.age),
+            age: Number.parseInt(newPatientForm.age, 10),
             gender: newPatientForm.gender,
             aadharOrAbhaId: updatedPatient.aadharOrAbhaId,
             identityType: newPatientForm.aadharId ? "AADHAR" : newPatientForm.abhaId ? "ABHA" : "HANDICAPPED",
@@ -398,6 +398,8 @@ export default function PatientSelector() {
       }
       if (selectedPatient) {
         sessionStorage.setItem("selectedPatient", JSON.stringify(selectedPatient));
+        localStorage.removeItem("bookingInfo");
+        localStorage.removeItem("hadAppointmentToday");
       }
       
       const userStr = localStorage.getItem("user") || localStorage.getItem("currentUser");
@@ -637,8 +639,9 @@ export default function PatientSelector() {
 
                 <div className="p-6 space-y-4">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Full Name *</label>
+                    <label htmlFor="patientName" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Full Name *</label>
                     <input
+                      id="patientName"
                       placeholder="Patient's full name"
                       className="w-full h-12 px-4 rounded-xl bg-white/5 border border-white/10 focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 outline-none transition-all placeholder:text-slate-600 text-white"
                       value={newPatientForm.name}
@@ -649,23 +652,25 @@ export default function PatientSelector() {
                   {/* Age and Gender */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Age *</label>
+                      <label htmlFor="patientAge" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Age *</label>
                       <input
+                        id="patientAge"
                         type="number"
                         placeholder="Age in years"
                         className="w-full h-12 px-4 rounded-xl bg-white/5 border border-white/10 focus:border-emerald-500/50 outline-none transition-all placeholder:text-slate-600 text-white"
                         value={newPatientForm.age}
                         onChange={e => {
                           const val = e.target.value;
-                          if (val === "" || parseInt(val) >= 0) {
+                          if (val === "" || Number.parseInt(val, 10) >= 0) {
                             setNewPatientForm({ ...newPatientForm, age: val });
                           }
                         }}
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Sex *</label>
+                      <label htmlFor="patientGender" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Sex *</label>
                       <select
+                        id="patientGender"
                         value={newPatientForm.gender}
                         onChange={(e) => setNewPatientForm({ ...newPatientForm, gender: e.target.value })}
                         className="w-full h-12 px-4 rounded-xl bg-white/5 border border-white/10 focus:border-emerald-500/50 outline-none transition-all text-white [&>option]:bg-slate-900"
@@ -688,8 +693,9 @@ export default function PatientSelector() {
                     <div className="rounded-xl border border-white/5 bg-white/[0.02] overflow-hidden divide-y divide-white/5">
                       {/* Aadhar */}
                       <div className="px-4 py-3">
-                        <label className="text-[9px] font-black uppercase tracking-widest text-emerald-600 block mb-1.5">Aadhar Card</label>
+                        <label htmlFor="patientAadhar" className="text-[9px] font-black uppercase tracking-widest text-emerald-600 block mb-1.5">Aadhar Card</label>
                         <input
+                          id="patientAadhar"
                           placeholder="12-digit Aadhar number"
                           maxLength={12}
                           readOnly={!!(editingPatientId && account?.patients.find(p => p.id === editingPatientId)?.aadharId)}
@@ -703,8 +709,9 @@ export default function PatientSelector() {
 
                       {/* ABHA */}
                       <div className="px-4 py-3">
-                        <label className="text-[9px] font-black uppercase tracking-widest text-sky-600 block mb-1.5">ABHA Card (Ayushman Bharat)</label>
+                        <label htmlFor="patientAbha" className="text-[9px] font-black uppercase tracking-widest text-sky-600 block mb-1.5">ABHA Card (Ayushman Bharat)</label>
                         <input
+                          id="patientAbha"
                           placeholder="ABHA health ID number"
                           className="w-full h-10 px-3 rounded-lg bg-white/5 border border-white/10 focus:border-sky-500/50 outline-none transition-all placeholder:text-slate-700 text-white text-sm"
                           value={newPatientForm.abhaId}
@@ -714,8 +721,9 @@ export default function PatientSelector() {
 
                       {/* UDID Handicapped Card */}
                       <div className="px-4 py-3">
-                        <label className="text-[9px] font-black uppercase tracking-widest text-amber-600 block mb-1.5">UDID Card (Disability / Handicapped)</label>
+                        <label htmlFor="patientUdid" className="text-[9px] font-black uppercase tracking-widest text-amber-600 block mb-1.5">UDID Card (Disability / Handicapped)</label>
                         <input
+                          id="patientUdid"
                           placeholder="Unique Disability ID number"
                           className="w-full h-10 px-3 rounded-lg bg-white/5 border border-white/10 focus:border-amber-500/50 outline-none transition-all placeholder:text-slate-700 text-white text-sm"
                           value={newPatientForm.udidCardNumber}

@@ -99,7 +99,7 @@ export default function LoginPage(): React.JSX.Element {
         }
         setError("");
         // Generate demo OTP (in production, backend would send to registered mobile)
-        const demoOtp = Math.floor(100000 + Math.random() * 900000).toString();
+        const demoOtp = (100000 + (window.crypto.getRandomValues(new Uint32Array(1))[0] % 900000)).toString();
         setGeneratedOtp(demoOtp);
         setOtpSent(true);
         setOtpTimer(60);
@@ -144,12 +144,13 @@ export default function LoginPage(): React.JSX.Element {
     const renderLogin = () => (
         <form onSubmit={handleLogin} className="flex flex-col gap-5">
             <div className="text-left">
-                <label className="block text-[15px] font-semibold text-slate-400 mb-2 ml-1">
+                <label htmlFor="username" className="block text-[15px] font-semibold text-slate-400 mb-2 ml-1">
                     Username
                 </label>
                 <div className="relative">
                     <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
                     <input
+                        id="username"
                         type="text"
                         placeholder="Enter your username"
                         value={username}
@@ -161,12 +162,13 @@ export default function LoginPage(): React.JSX.Element {
             </div>
 
             <div className="text-left mt-2">
-                <label className="block text-[15px] font-semibold text-slate-400 mb-2 ml-1">
+                <label htmlFor="password" className="block text-[15px] font-semibold text-slate-400 mb-2 ml-1">
                     Password
                 </label>
                 <div className="relative">
                     <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
                     <input
+                        id="password"
                         type={showPassword ? "text" : "password"}
                         placeholder="Enter your password"
                         value={password}
@@ -217,12 +219,13 @@ export default function LoginPage(): React.JSX.Element {
             </div>
 
             <div className="text-left">
-                <label className="block text-[15px] font-semibold text-slate-500 dark:text-slate-400 mb-2 ml-1">
+                <label htmlFor="aadhaarNumber" className="block text-[15px] font-semibold text-slate-500 dark:text-slate-400 mb-2 ml-1">
                     Aadhaar Card Number
                 </label>
                 <div className="relative">
                     <CreditCard size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                     <input
+                        id="aadhaarNumber"
                         type="text"
                         placeholder="[Aadhaar Redacted]"
                         value={aadhaarNumber}
@@ -261,12 +264,13 @@ export default function LoginPage(): React.JSX.Element {
             </div>
 
             <div className="text-left">
-                <label className="block text-[15px] font-semibold text-slate-500 dark:text-slate-400 mb-2 ml-1">
+                <label htmlFor="otp" className="block text-[15px] font-semibold text-slate-500 dark:text-slate-400 mb-2 ml-1">
                     Enter 6-Digit OTP
                 </label>
                 <div className="relative">
                     <KeyRound size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                     <input
+                        id="otp"
                         type="text"
                         placeholder="• • • • • •"
                         value={otp}
@@ -312,18 +316,18 @@ export default function LoginPage(): React.JSX.Element {
             </div>
 
             <div className="text-left">
-                <label className="block text-[15px] font-semibold text-slate-500 dark:text-slate-400 mb-2 ml-1">New Password</label>
+                <label htmlFor="newPassword" className="block text-[15px] font-semibold text-slate-500 dark:text-slate-400 mb-2 ml-1">New Password</label>
                 <div className="relative">
                     <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
-                    <input type="password" placeholder="Min. 6 characters" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className={inputClass} />
+                    <input id="newPassword" type="password" placeholder="Min. 6 characters" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className={inputClass} />
                 </div>
             </div>
 
             <div className="text-left">
-                <label className="block text-[15px] font-semibold text-slate-500 dark:text-slate-400 mb-2 ml-1">Confirm New Password</label>
+                <label htmlFor="confirmPassword" className="block text-[15px] font-semibold text-slate-500 dark:text-slate-400 mb-2 ml-1">Confirm New Password</label>
                 <div className="relative">
                     <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
-                    <input type="password" placeholder="Re-enter password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={inputClass} />
+                    <input id="confirmPassword" type="password" placeholder="Re-enter password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={inputClass} />
                 </div>
             </div>
 
@@ -382,9 +386,9 @@ export default function LoginPage(): React.JSX.Element {
                 {mode === "login" && (
                     <div className="mt-8 pt-6 border-t border-white/5 text-sm text-slate-400 font-medium">
                         Don't have an account?{" "}
-                        <span onClick={() => navigate("/role-selection")} className="text-blue-400 hover:text-blue-300 font-bold cursor-pointer transition-colors">
+                        <button type="button" onClick={() => navigate("/role-selection")} className="text-blue-400 hover:text-blue-300 font-bold cursor-pointer transition-colors bg-transparent border-none p-0 inline">
                             Sign Up
-                        </span>
+                        </button>
                     </div>
                 )}
             </div>

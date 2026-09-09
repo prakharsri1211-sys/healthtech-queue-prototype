@@ -63,9 +63,9 @@ export default function AccountManagement(): React.JSX.Element {
         }
 
         const dependent: Dependent = {
-            id: Math.random().toString(36).substr(2, 9),
+            id: crypto.randomUUID().substring(0, 9),
             name: newDependent.name,
-            age: parseInt(newDependent.age),
+            age: Number.parseInt(newDependent.age, 10),
             aadharId: newDependent.aadharId,
         };
 
@@ -138,8 +138,9 @@ export default function AccountManagement(): React.JSX.Element {
                             <h2 className="text-lg font-bold text-white mb-5">New Dependent</h2>
                             <form onSubmit={handleAddDependent} className="flex flex-col gap-4">
                                 <div className="flex flex-col gap-2">
-                                    <label className="text-sm text-[#9CA3AF]">Full Name</label>
+                                    <label htmlFor="name" className="text-sm text-[#9CA3AF]">Full Name</label>
                                     <input
+                                        id="name"
                                         type="text"
                                         required
                                         value={newDependent.name}
@@ -149,8 +150,9 @@ export default function AccountManagement(): React.JSX.Element {
                                 </div>
                                 <div className="flex flex-col sm:flex-row gap-4">
                                     <div className="flex-1 flex flex-col gap-2">
-                                        <label className="text-sm text-[#9CA3AF]">Age</label>
+                                        <label htmlFor="age" className="text-sm text-[#9CA3AF]">Age</label>
                                         <input
+                                            id="age"
                                             type="number"
                                             required
                                             value={newDependent.age}
@@ -159,8 +161,9 @@ export default function AccountManagement(): React.JSX.Element {
                                         />
                                     </div>
                                     <div className="flex-[2] flex flex-col gap-2">
-                                        <label className="text-sm text-[#9CA3AF]">Aadhar Number</label>
+                                        <label htmlFor="aadharId" className="text-sm text-[#9CA3AF]">Aadhar Number</label>
                                         <input
+                                            id="aadharId"
                                             type="text"
                                             required
                                             maxLength={12}
@@ -173,8 +176,9 @@ export default function AccountManagement(): React.JSX.Element {
 
                                 {/* UDID Section */}
                                 <div className="flex flex-col gap-2">
-                                    <label className="text-sm text-[#9CA3AF]">UDID Card Number (Optional)</label>
+                                    <label htmlFor="udidCardNumber" className="text-sm text-[#9CA3AF]">UDID Card Number (Optional)</label>
                                     <input
+                                        id="udidCardNumber"
                                         type="text"
                                         value={newDependent.udidCardNumber}
                                         onChange={(e) => setNewDependent({ ...newDependent, udidCardNumber: e.target.value })}
@@ -183,8 +187,9 @@ export default function AccountManagement(): React.JSX.Element {
                                 </div>
                                 <div className="flex flex-col sm:flex-row gap-4">
                                     <div className="flex-1 flex flex-col gap-2">
-                                        <label className="text-sm text-[#9CA3AF]">Disability %</label>
+                                        <label htmlFor="disabilityPercentage" className="text-sm text-[#9CA3AF]">Disability %</label>
                                         <input
+                                            id="disabilityPercentage"
                                             type="number"
                                             value={newDependent.disabilityPercentage}
                                             onChange={(e) => setNewDependent({ ...newDependent, disabilityPercentage: e.target.value })}
@@ -192,8 +197,9 @@ export default function AccountManagement(): React.JSX.Element {
                                         />
                                     </div>
                                     <div className="flex-[2] flex flex-col gap-2">
-                                        <label className="text-sm text-[#9CA3AF]">Disability Type</label>
+                                        <label htmlFor="disabilityType" className="text-sm text-[#9CA3AF]">Disability Type</label>
                                         <input
+                                            id="disabilityType"
                                             type="text"
                                             value={newDependent.disabilityType}
                                             onChange={(e) => setNewDependent({ ...newDependent, disabilityType: e.target.value })}

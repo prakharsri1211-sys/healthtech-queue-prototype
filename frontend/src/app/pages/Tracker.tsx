@@ -597,12 +597,12 @@ export default function Tracker() {
     const parts = t.trim().split(':');
     if (parts.length < 2) return 11 * 60 * 60000 + 55 * 60000;
     const [h, m] = parts.map(Number);
-    if (isNaN(h) || isNaN(m)) return 11 * 60 * 60000 + 55 * 60000;
+    if (Number.isNaN(h) || Number.isNaN(m)) return 11 * 60 * 60000 + 55 * 60000;
     return (h * 60 + m) * 60000;
   }, []);
   
   const formatMs = useCallback((ms: number): string => {
-    if (isNaN(ms) || ms < 0) ms = 11 * 60 * 60000 + 55 * 60000;
+    if (Number.isNaN(ms) || ms < 0) ms = 11 * 60 * 60000 + 55 * 60000;
     const totalMin = Math.floor(ms / 60000);
     let h = Math.floor(totalMin / 60) % 24;
     const m = totalMin % 60;
@@ -638,7 +638,7 @@ export default function Tracker() {
     const parts = timeStr.trim().split(":");
     let h = Number(parts[0]);
     let m = Number(parts[1]) || 0;
-    if (isNaN(h) || isNaN(m)) return "Loading...";
+    if (Number.isNaN(h) || Number.isNaN(m)) return "Loading...";
     return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
   };
 
@@ -652,7 +652,7 @@ export default function Tracker() {
     // Priority 1: Smart ETA from backend (if standard token)
     if (!isPremium && smartETA) {
       let [h, m] = smartETA.trim().split(":").map(Number);
-      if (!isNaN(h) && !isNaN(m)) {
+      if (!Number.isNaN(h) && !Number.isNaN(m)) {
         d.setHours(h, m, 0, 0);
         return d;
       }
@@ -664,7 +664,7 @@ export default function Tracker() {
       const parts = timeStr.split(":");
       let h = Number(parts[0]);
       let m = Number(parts[1]) || 0;
-      if (!isNaN(h) && !isNaN(m)) {
+      if (!Number.isNaN(h) && !Number.isNaN(m)) {
         d.setHours(h, m, 0, 0);
       } else {
         d.setHours(11, 55, 0, 0);
@@ -672,8 +672,8 @@ export default function Tracker() {
     } else {
       const startStr = clinicOpensAt || clinicDetails?.startTime || '11:55';
       let [h, m] = startStr.trim().split(":").map(Number);
-      if (isNaN(h)) h = 11;
-      if (isNaN(m)) m = 55;
+      if (Number.isNaN(h)) h = 11;
+      if (Number.isNaN(m)) m = 55;
       d.setHours(h, m, 0, 0);
       
       // Dynamic shift: If the clinic opening time has passed, the true queue base is NOW
@@ -780,8 +780,8 @@ export default function Tracker() {
     }
     const startStr = clinicOpensAt || clinicDetails?.startTime || '11:55';
     let [h, m] = startStr.trim().split(":").map(Number);
-    if (isNaN(h)) h = 11;
-    if (isNaN(m)) m = 55;
+    if (Number.isNaN(h)) h = 11;
+    if (Number.isNaN(m)) m = 55;
     d.setHours(h, m, 0, 0);
     return d.getTime();
   };

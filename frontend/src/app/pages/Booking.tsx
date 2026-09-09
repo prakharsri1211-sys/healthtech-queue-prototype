@@ -136,7 +136,7 @@ export default function Booking() {
     if (parts.length >= 2) {
       const lat = parts[0].trim();
       const lng = parts[1].trim();
-      if (!isNaN(Number(lat)) && !isNaN(Number(lng))) {
+      if (!Number.isNaN(Number(lat)) && !Number.isNaN(Number(lng))) {
         e.preventDefault();
         setPatientLat(lat);
         setPatientLng(lng);
@@ -270,18 +270,18 @@ export default function Booking() {
 
   const parseTimeToMinutes = (timeStr: string): number => {
     if (!timeStr) return 0;
-    const [h, m] = timeStr.split(":").map(s => parseInt(s, 10));
+    const [h, m] = timeStr.split(":").map(s => Number.parseInt(s, 10));
     return (h * 60) + m;
   };
 
   const applyCustomTime = (h: string, m: string) => {
-    let hr = parseInt(h);
-    let min = parseInt(m);
-    if (isNaN(hr) || hr < 0 || hr > 23) {
+    let hr = Number.parseInt(h.toString(), 10);
+    let min = Number.parseInt(m.toString(), 10);
+    if (Number.isNaN(hr) || hr < 0 || hr > 23) {
       setTimeError("Invalid hour");
       return;
     }
-    if (isNaN(min) || min < 0 || min > 59) {
+    if (Number.isNaN(min) || min < 0 || min > 59) {
       setTimeError("Invalid minute");
       return;
     }
@@ -413,8 +413,8 @@ export default function Booking() {
             isPremium, 
             tokenNumber: 0,
             accessType: selectedTier === 'premium' ? "PREMIUM" : "STANDARD",
-            patientLatitude: patientLat ? parseFloat(patientLat) : null,
-            patientLongitude: patientLng ? parseFloat(patientLng) : null
+            patientLatitude: patientLat ? Number.parseFloat(patientLat) : null,
+            patientLongitude: patientLng ? Number.parseFloat(patientLng) : null
          };
         
         const resp = await fetch(`${API}/api/appointments`, {

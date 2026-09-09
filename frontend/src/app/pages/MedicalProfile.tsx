@@ -60,10 +60,11 @@ export default function MedicalProfile() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: "var(--text-secondary)" }}>
+                <label htmlFor="name" className="block text-xs font-medium mb-1" style={{ color: "var(--text-secondary)" }}>
                   Full Name *
                 </label>
                 <input
+                  id="name"
                   type="text"
                   value={formData.name}
                   onChange={(e) => handleChange("name", e.target.value)}
@@ -76,10 +77,11 @@ export default function MedicalProfile() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium mb-1" style={{ color: "var(--text-secondary)" }}>
+                  <label htmlFor="age" className="block text-xs font-medium mb-1" style={{ color: "var(--text-secondary)" }}>
                     Age *
                   </label>
                   <input
+                    id="age"
                     type="number"
                     value={formData.age}
                     onChange={(e) => handleChange("age", e.target.value)}
@@ -91,10 +93,11 @@ export default function MedicalProfile() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium mb-1" style={{ color: "var(--text-secondary)" }}>
+                  <label htmlFor="gender" className="block text-xs font-medium mb-1" style={{ color: "var(--text-secondary)" }}>
                     Gender *
                   </label>
                   <select
+                    id="gender"
                     value={formData.gender}
                     onChange={(e) => handleChange("gender", e.target.value)}
                     required
@@ -110,7 +113,7 @@ export default function MedicalProfile() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: "var(--text-secondary)" }}>
+                <label htmlFor="phone" className="block text-xs font-medium mb-1" style={{ color: "var(--text-secondary)" }}>
                   Phone Number *
                 </label>
                 <div className="flex gap-2">
@@ -118,6 +121,7 @@ export default function MedicalProfile() {
                     <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "var(--slate-gray)" }} />
                     <span className="absolute left-10 top-1/2 -translate-y-1/2 text-sm" style={{ color: "var(--text-secondary)" }}>+91</span>
                     <input
+                      id="phone"
                       type="tel"
                       value={formData.phone}
                       onChange={(e) => handleChange("phone", e.target.value.replace(/\D/g, "").slice(0, 10))}
@@ -134,13 +138,14 @@ export default function MedicalProfile() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: "var(--text-secondary)" }}>
+                <label htmlFor="adhar" className="block text-xs font-medium mb-1" style={{ color: "var(--text-secondary)" }}>
                   Adhar Number *
                 </label>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "var(--slate-gray)" }} />
                     <input
+                      id="adhar"
                       type="text"
                       value={formData.adhar}
                       onChange={(e) => handleChange("adhar", e.target.value.replace(/\D/g, "").slice(0, 12))}
@@ -172,10 +177,11 @@ export default function MedicalProfile() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: "var(--text-secondary)" }}>
+                <label htmlFor="symptoms" className="block text-xs font-medium mb-1" style={{ color: "var(--text-secondary)" }}>
                   Current Symptoms
                 </label>
                 <textarea
+                  id="symptoms"
                   value={formData.symptoms}
                   onChange={(e) => handleChange("symptoms", e.target.value)}
                   placeholder="Describe your symptoms..."
@@ -186,10 +192,11 @@ export default function MedicalProfile() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: "var(--text-secondary)" }}>
+                <label htmlFor="medications" className="block text-xs font-medium mb-1" style={{ color: "var(--text-secondary)" }}>
                   Current Medications
                 </label>
                 <textarea
+                  id="medications"
                   value={formData.medications}
                   onChange={(e) => handleChange("medications", e.target.value)}
                   placeholder="List medications..."
@@ -202,11 +209,12 @@ export default function MedicalProfile() {
               <div className="divider my-4"></div>
 
               <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: "var(--text-secondary)" }}>
+                <label htmlFor="abhaNumber" className="block text-xs font-medium mb-1" style={{ color: "var(--text-secondary)" }}>
                   ABHA Number
                 </label>
                 <div className="flex gap-2">
                   <input
+                    id="abhaNumber"
                     type="text"
                     value={formData.abhaNumber}
                     onChange={(e) => handleChange("abhaNumber", e.target.value)}
@@ -222,11 +230,12 @@ export default function MedicalProfile() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: "var(--text-secondary)" }}>
+                <label htmlFor="ayushmanCard" className="block text-xs font-medium mb-1" style={{ color: "var(--text-secondary)" }}>
                   Ayushman Card Number
                 </label>
                 <div className="flex gap-2">
                   <input
+                    id="ayushmanCard"
                     type="text"
                     value={formData.ayushmanCard}
                     onChange={(e) => handleChange("ayushmanCard", e.target.value)}
