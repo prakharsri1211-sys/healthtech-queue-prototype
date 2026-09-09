@@ -1301,7 +1301,7 @@ export default function Tracker() {
                   <Ticket size={14} />
                   <span className="text-[9px] font-black uppercase tracking-widest">Queue Position</span>
                 </div>
-                <h4 className={`text-4xl font-black italic tracking-tighter ${darkMode ? "text-white" : "text-white"}`} style={{ fontVariantNumeric: "tabular-nums" }}>
+                <h4 className="text-4xl font-black italic tracking-tighter text-white" style={{ fontVariantNumeric: "tabular-nums" }}>
                   #{bookingInfo.tokenNumber || "1"}
                 </h4>
                 <p className="text-[9px] text-slate-600 font-black uppercase tracking-widest mt-2">Token Sequential</p>
